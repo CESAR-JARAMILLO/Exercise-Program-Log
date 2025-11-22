@@ -29,4 +29,9 @@ Route::middleware(['auth'])->group(function () {
             ),
         )
         ->name('two-factor.show');
+
+    Volt::route('programs', 'programs.index')->name('programs.index');
+    Volt::route('programs/create', 'programs.create')->name('programs.create');
+    Volt::route('programs/{program}', 'programs.show')->name('programs.show');
+    Volt::route('programs/{program}/edit', 'programs.edit')->name('programs.edit');
 });
