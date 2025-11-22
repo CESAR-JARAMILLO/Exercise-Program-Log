@@ -12,6 +12,7 @@ class Program extends Model
     protected $fillable = [
         'user_id',
         'name',
+        'length_weeks',
         'description',
         'start_date',
         'end_date',
@@ -22,7 +23,7 @@ class Program extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function exercises() {
-        return $this->hasMany(Exercise::class);
+    public function weeks() {
+        return $this->hasMany(ProgramWeek::class);
     }
 }
