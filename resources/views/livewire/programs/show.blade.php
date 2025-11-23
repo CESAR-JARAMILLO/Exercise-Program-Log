@@ -4,7 +4,8 @@ use App\Models\Program;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
-new class extends Component {
+new class extends Component
+{
     // Track which weeks are expanded
     public array $expandedWeeks = [];
 
@@ -60,7 +61,7 @@ new class extends Component {
     public function toggleWeek($weekNumber): void
     {
         $weekNumber = (int) $weekNumber;
-        $this->expandedWeeks[$weekNumber] = !($this->expandedWeeks[$weekNumber] ?? false);
+        $this->expandedWeeks[$weekNumber] = ! ($this->expandedWeeks[$weekNumber] ?? false);
     }
 
     public function delete(): void
