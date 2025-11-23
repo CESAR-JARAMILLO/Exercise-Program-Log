@@ -65,4 +65,12 @@ class User extends Authenticatable
     public function programs() {
         return $this->hasMany(Program::class);
     }
+
+    public function activePrograms() {
+        return $this->hasMany(ActiveProgram::class);
+    }
+
+    public function workoutLogs() {
+        return $this->hasMany(WorkoutLog::class);
+    }
 }
