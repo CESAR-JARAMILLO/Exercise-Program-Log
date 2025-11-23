@@ -36,6 +36,7 @@ new class extends Component {
                         'week' => $scheduled['week'],
                         'day' => $scheduled['day'],
                         'program_day_id' => $scheduled['program_day_id'],
+                        'is_rest_day' => $scheduled['is_rest_day'] ?? false,
                     ];
                 }
             }
@@ -62,12 +63,16 @@ new class extends Component {
         
         while ($currentDay <= $endOfCalendar) {
             $dateKey = $currentDay->format('Y-m-d');
+            $scheduledWorkout = $scheduledDates[$dateKey] ?? null;
+            $isRestDay = isset($scheduledWorkout) && ($scheduledWorkout['is_rest_day'] ?? false);
+            
             $calendarDays[] = [
                 'date' => $currentDay->copy(),
                 'isCurrentMonth' => $currentDay->format('Y-m') === $this->currentMonth,
                 'isToday' => $currentDay->isToday(),
-                'hasScheduledWorkout' => isset($scheduledDates[$dateKey]),
-                'scheduledWorkout' => $scheduledDates[$dateKey] ?? null,
+                'hasScheduledWorkout' => isset($scheduledDates[$dateKey]) && !$isRestDay,
+                'isRestDay' => $isRestDay,
+                'scheduledWorkout' => $scheduledWorkout,
                 'hasLoggedWorkout' => isset($loggedDates[$dateKey]),
                 'workoutLog' => $loggedDates[$dateKey] ?? null,
             ];
@@ -179,14 +184,22 @@ new class extends Component {
                             <span class="text-sm font-medium {{ $day['isCurrentMonth'] ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400' }}">
                                 {{ $day['date']->format('j') }}
                             </span>
-                            @if($day['hasLoggedWorkout'])
+                            @if($day['isRestDay'] ?? false)
+                                <span class="w-2 h-2 rounded-full bg-gray-400" title="Rest day"></span>
+                            @elseif($day['hasLoggedWorkout'])
                                 <span class="w-2 h-2 rounded-full bg-green-500" title="Workout logged"></span>
                             @elseif($day['hasScheduledWorkout'])
                                 <span class="w-2 h-2 rounded-full bg-blue-500" title="Scheduled workout"></span>
                             @endif
                         </div>
                         
-                        @if($day['hasScheduledWorkout'] && $day['isCurrentMonth'])
+                        @if(($day['isRestDay'] ?? false) && $day['isCurrentMonth'])
+                            <div class="mt-1">
+                                <span class="text-xs text-zinc-500 dark:text-zinc-400 italic">
+                                    {{ __('Rest Day') }}
+                                </span>
+                            </div>
+                        @elseif($day['hasScheduledWorkout'] && $day['isCurrentMonth'])
                             <div class="mt-1">
                                 @if($day['hasLoggedWorkout'])
                                     <flux:button 

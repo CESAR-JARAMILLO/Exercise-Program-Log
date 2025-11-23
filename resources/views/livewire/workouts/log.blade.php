@@ -157,6 +157,10 @@ new class extends Component {
                     ]);
                 }
             }
+            
+            // Update progress after logging workout
+            $activeProgram->refresh();
+            $activeProgram->updateProgress();
         });
         
         session()->flash('success', __('Workout logged successfully!'));

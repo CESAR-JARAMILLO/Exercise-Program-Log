@@ -36,13 +36,14 @@ class ActiveProgram extends Model
     }
 
     // Get scheduled date for a specific week and day
+    // Note: Dates are sequential (including rest days), but rest days won't have workouts
     public function getScheduledDate($weekNumber, $dayNumber): Carbon {
         return $this->started_at->copy()
             ->addWeeks($weekNumber - 1)
             ->addDays($dayNumber - 1);
     }
 
-    // Get all scheduled workout dates
+    // Get all scheduled dates (including rest days for calendar display)
     public function getScheduledDates(): array {
         $dates = [];
         foreach ($this->program->weeks as $week) {
@@ -52,21 +53,54 @@ class ActiveProgram extends Model
                     'day' => $day->day_number,
                     'date' => $this->getScheduledDate($week->week_number, $day->day_number),
                     'program_day_id' => $day->id,
+                    'is_rest_day' => $day->is_rest_day ?? false,
                 ];
             }
         }
         return $dates;
     }
 
-    // Check if a date has a scheduled workout
+    // Get only workout dates (excluding rest days)
+    public function getWorkoutDates(): array {
+        $dates = [];
+        foreach ($this->program->weeks as $week) {
+            foreach ($week->days as $day) {
+                // Skip rest days
+                if ($day->is_rest_day) {
+                    continue;
+                }
+                $dates[] = [
+                    'week' => $week->week_number,
+                    'day' => $day->day_number,
+                    'date' => $this->getScheduledDate($week->week_number, $day->day_number),
+                    'program_day_id' => $day->id,
+                    'is_rest_day' => false,
+                ];
+            }
+        }
+        return $dates;
+    }
+
+    // Check if a date has a scheduled workout (excluding rest days)
     public function hasScheduledWorkout($date): ?array {
-        $scheduledDates = $this->getScheduledDates();
-        foreach ($scheduledDates as $scheduled) {
+        $workoutDates = $this->getWorkoutDates();
+        foreach ($workoutDates as $scheduled) {
             if ($scheduled['date']->isSameDay($date)) {
                 return $scheduled;
             }
         }
         return null;
+    }
+
+    // Check if a date is a rest day
+    public function isRestDay($date): bool {
+        $scheduledDates = $this->getScheduledDates();
+        foreach ($scheduledDates as $scheduled) {
+            if ($scheduled['date']->isSameDay($date)) {
+                return $scheduled['is_rest_day'] ?? false;
+            }
+        }
+        return false;
     }
 
     // Get workout log for a specific date
@@ -101,9 +135,15 @@ class ActiveProgram extends Model
         return $nextWorkout;
     }
 
-    // Check if today has a workout and if it's logged
+    // Check if today has a workout and if it's logged (excluding rest days)
     public function getTodayWorkoutStatus(): ?array {
         $today = Carbon::today();
+        
+        // Check if today is a rest day
+        if ($this->isRestDay($today)) {
+            return null;
+        }
+        
         $todayWorkout = $this->hasScheduledWorkout($today);
         
         if (!$todayWorkout) {
@@ -117,5 +157,54 @@ class ActiveProgram extends Model
             'isLogged' => $workoutLog !== null,
             'workoutLog' => $workoutLog,
         ];
+    }
+
+    // Update progress based on logged workouts
+    public function updateProgress(): void {
+        $workoutDates = $this->getWorkoutDates();
+        $loggedWorkouts = $this->workoutLogs()
+            ->whereIn('program_day_id', collect($workoutDates)->pluck('program_day_id'))
+            ->get()
+            ->keyBy('program_day_id');
+        
+        $lastCompletedWeek = 0;
+        $lastCompletedDay = 0;
+        
+        // Find the last completed workout
+        foreach ($workoutDates as $workout) {
+            if (isset($loggedWorkouts[$workout['program_day_id']])) {
+                if ($workout['week'] > $lastCompletedWeek || 
+                    ($workout['week'] == $lastCompletedWeek && $workout['day'] > $lastCompletedDay)) {
+                    $lastCompletedWeek = $workout['week'];
+                    $lastCompletedDay = $workout['day'];
+                }
+            }
+        }
+        
+        // Update current week and day to the next uncompleted workout
+        $nextWorkout = null;
+        foreach ($workoutDates as $workout) {
+            if (!isset($loggedWorkouts[$workout['program_day_id']])) {
+                if ($workout['week'] > $lastCompletedWeek || 
+                    ($workout['week'] == $lastCompletedWeek && $workout['day'] > $lastCompletedDay)) {
+                    $nextWorkout = $workout;
+                    break;
+                }
+            }
+        }
+        
+        if ($nextWorkout) {
+            $this->update([
+                'current_week' => $nextWorkout['week'],
+                'current_day' => $nextWorkout['day'],
+            ]);
+        } else {
+            // All workouts completed
+            $this->update([
+                'status' => 'completed',
+                'current_week' => $this->program->length_weeks,
+                'current_day' => 7,
+            ]);
+        }
     }
 }

@@ -13,6 +13,11 @@ class ProgramDay extends Model
         'program_week_id',
         'day_number',
         'label',
+        'is_rest_day',
+    ];
+
+    protected $casts = [
+        'is_rest_day' => 'boolean',
     ];
 
     public function week() {

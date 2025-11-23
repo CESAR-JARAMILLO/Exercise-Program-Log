@@ -17,6 +17,9 @@ new class extends Component {
     // Nested structure: exercises[week][day][exercise_index] = [...]
     public array $exercises = [];
 
+    // Track rest days: restDays[week][day] = true/false
+    public array $restDays = [];
+
     // Track which weeks are expanded
     public array $expandedWeeks = [];
 
@@ -35,9 +38,11 @@ new class extends Component {
     protected function initializeWeeks(): void
     {
         $this->exercises = [];
+        $this->restDays = [];
         for ($week = 1; $week <= $this->length_weeks; $week++) {
             for ($day = 1; $day <= 7; $day++) {
                 $this->exercises[$week][$day] = [];
+                $this->restDays[$week][$day] = false;
             }
             // Expand all weeks by default
             $this->expandedWeeks[$week] = true;
@@ -124,10 +129,26 @@ new class extends Component {
                 ]);
 
                 foreach ($days as $dayNum => $dayExercises) {
+                    // Check if day has any exercises with names
+                    $hasExercises = false;
+                    foreach ($dayExercises as $exercise) {
+                        if (!empty($exercise['name'])) {
+                            $hasExercises = true;
+                            break;
+                        }
+                    }
+
+                    // If no exercises, automatically make it a rest day
+                    $isRestDay = $this->restDays[$weekNum][$dayNum] ?? false;
+                    if (!$hasExercises) {
+                        $isRestDay = true;
+                    }
+
                     $programDay = ProgramDay::create([
                         'program_week_id' => $programWeek->id,
                         'day_number' => $dayNum,
                         'label' => "Day $dayNum",
+                        'is_rest_day' => $isRestDay,
                     ]);
 
                     // Add exercises for this day (only save exercises with names)
@@ -233,9 +254,31 @@ new class extends Component {
                                         <div
                                             class="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 bg-neutral-50 dark:bg-neutral-800/50">
                                             <div class="mb-3 flex items-center justify-between">
-                                                <h4 class="font-medium text-zinc-900 dark:text-zinc-100">
-                                                    {{ __('Day :number', ['number' => $dayNum]) }}
-                                                </h4>
+                                                <div class="flex items-center gap-3">
+                                                    <h4 class="font-medium text-zinc-900 dark:text-zinc-100">
+                                                        {{ __('Day :number', ['number' => $dayNum]) }}
+                                                    </h4>
+                                                    @php
+                                                        $hasExercises =
+                                                            !empty($dayExercises) &&
+                                                            collect($dayExercises)->contains(
+                                                                fn($ex) => !empty($ex['name']),
+                                                            );
+                                                    @endphp
+                                                    @if (!$hasExercises)
+                                                        <span class="text-xs text-zinc-500 dark:text-zinc-400 italic">
+                                                            {{ __('(Rest Day - No exercises)') }}
+                                                        </span>
+                                                    @else
+                                                        <label
+                                                            class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                                                            <input type="checkbox"
+                                                                wire:model="restDays.{{ $weekNum }}.{{ $dayNum }}"
+                                                                class="rounded border-neutral-300 text-primary-600 focus:ring-primary-500">
+                                                            <span>{{ __('Rest Day') }}</span>
+                                                        </label>
+                                                    @endif
+                                                </div>
                                                 <flux:button type="button"
                                                     wire:click="addExercise({{ $weekNum }}, {{ $dayNum }})"
                                                     variant="ghost" size="sm">
