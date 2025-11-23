@@ -79,6 +79,15 @@ new class extends Component {
             </p>
         </div>
         <div class="flex items-center gap-2">
+            @if($program->isTemplate())
+                <flux:button 
+                    href="{{ route('programs.start', $program) }}" 
+                    variant="primary" 
+                    wire:navigate
+                >
+                    {{ __('Start Program') }}
+                </flux:button>
+            @endif
             <flux:button 
                 href="{{ route('programs.edit', $program) }}" 
                 variant="ghost" 
