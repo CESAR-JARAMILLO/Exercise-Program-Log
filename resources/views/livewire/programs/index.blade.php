@@ -16,8 +16,23 @@ new class extends Component {
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Get today's workout status for each active program
+        $activeProgramsWithWorkouts = [];
+        foreach ($programs as $program) {
+            foreach ($program->activePrograms as $activeProgram) {
+                $todayStatus = $activeProgram->getTodayWorkoutStatus();
+                if ($todayStatus) {
+                    $activeProgramsWithWorkouts[$activeProgram->id] = [
+                        'active_program' => $activeProgram,
+                        'todayStatus' => $todayStatus,
+                    ];
+                }
+            }
+        }
+
         return [
             'programs' => $programs,
+            'activeProgramsWithWorkouts' => $activeProgramsWithWorkouts,
         ];
     }
 
@@ -133,6 +148,27 @@ new class extends Component {
                                 {{ __('Start') }}
                             </flux:button>
                         @else
+                            @if ($program->activePrograms->isNotEmpty())
+                                @php
+                                    $firstActiveProgram = $program->activePrograms->first();
+                                    $workoutData = $activeProgramsWithWorkouts[$firstActiveProgram->id] ?? null;
+                                    $todayStatus = $workoutData['todayStatus'] ?? null;
+                                @endphp
+                                @if ($todayStatus && !$todayStatus['isLogged'])
+                                    {{-- Today has workout and it's not logged yet --}}
+                                    <flux:button
+                                        href="{{ route('workouts.log', ['activeProgram' => $firstActiveProgram->id, 'date' => now()->format('Y-m-d')]) }}"
+                                        variant="primary" size="sm" wire:navigate>
+                                        {{ __('Log Workout') }}
+                                    </flux:button>
+                                @else
+                                    {{-- Show calendar button otherwise --}}
+                                    <flux:button href="{{ route('workouts.calendar') }}" variant="primary"
+                                        size="sm" wire:navigate>
+                                        {{ __('Calendar') }}
+                                    </flux:button>
+                                @endif
+                            @endif
                             <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" size="sm"
                                 wire:navigate>
                                 {{ __('Edit') }}

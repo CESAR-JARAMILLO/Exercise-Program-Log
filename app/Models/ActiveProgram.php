@@ -75,4 +75,47 @@ class ActiveProgram extends Model
             ->whereDate('workout_date', $date)
             ->first();
     }
+
+    // Get today's scheduled workout or next scheduled workout
+    public function getTodayOrNextWorkout(): ?array {
+        $today = Carbon::today();
+        $scheduledDates = $this->getScheduledDates();
+        
+        // First, try to find today's workout
+        foreach ($scheduledDates as $scheduled) {
+            if ($scheduled['date']->isSameDay($today)) {
+                return $scheduled;
+            }
+        }
+        
+        // If no workout today, find the next scheduled workout
+        $nextWorkout = null;
+        foreach ($scheduledDates as $scheduled) {
+            if ($scheduled['date']->isFuture() || $scheduled['date']->isToday()) {
+                if ($nextWorkout === null || $scheduled['date']->lt($nextWorkout['date'])) {
+                    $nextWorkout = $scheduled;
+                }
+            }
+        }
+        
+        return $nextWorkout;
+    }
+
+    // Check if today has a workout and if it's logged
+    public function getTodayWorkoutStatus(): ?array {
+        $today = Carbon::today();
+        $todayWorkout = $this->hasScheduledWorkout($today);
+        
+        if (!$todayWorkout) {
+            return null;
+        }
+        
+        $workoutLog = $this->getWorkoutLogForDate($today);
+        
+        return [
+            'scheduled' => $todayWorkout,
+            'isLogged' => $workoutLog !== null,
+            'workoutLog' => $workoutLog,
+        ];
+    }
 }
