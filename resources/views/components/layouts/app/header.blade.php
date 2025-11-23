@@ -22,6 +22,43 @@
 
             <flux:spacer />
 
+            @auth
+                <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 me-4 max-lg:hidden" 
+                     x-data="{ 
+                         timezone: '{{ auth()->user()->getTimezone() }}',
+                         updateTime() {
+                             const now = new Date();
+                             const formatter = new Intl.DateTimeFormat('en-US', {
+                                 timeZone: this.timezone,
+                                 month: 'short',
+                                 day: 'numeric',
+                                 year: 'numeric',
+                                 hour: 'numeric',
+                                 minute: '2-digit',
+                                 hour12: true
+                             });
+                             const parts = formatter.formatToParts(now);
+                             const month = parts.find(p => p.type === 'month')?.value || '';
+                             const day = parts.find(p => p.type === 'day')?.value || '';
+                             const year = parts.find(p => p.type === 'year')?.value || '';
+                             const hour = parts.find(p => p.type === 'hour')?.value || '';
+                             const minute = parts.find(p => p.type === 'minute')?.value || '';
+                             const period = parts.find(p => p.type === 'dayPeriod')?.value || '';
+                             
+                             this.$el.querySelector('[data-date]').textContent = `${month} ${day}, ${year}`;
+                             this.$el.querySelector('[data-time]').textContent = `${hour}:${minute} ${period}`;
+                         },
+                         init() {
+                             this.updateTime();
+                             setInterval(() => this.updateTime(), 1000);
+                         }
+                     }">
+                    <span class="font-medium" data-date>{{ now()->setTimezone(auth()->user()->getTimezone())->format('M d, Y') }}</span>
+                    <span class="text-zinc-500 dark:text-zinc-400">•</span>
+                    <span data-time>{{ now()->setTimezone(auth()->user()->getTimezone())->format('g:i A') }}</span>
+                </div>
+            @endauth
+
             <flux:navbar class="me-1.5 space-x-0.5 rtl:space-x-reverse py-0!">
                 <flux:tooltip :content="__('Search')" position="bottom">
                     <flux:navbar.item class="!h-10 [&>div>svg]:size-5" icon="magnifying-glass" href="#" :label="__('Search')" />

@@ -23,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'timezone',
     ];
 
     /**
@@ -72,5 +73,13 @@ class User extends Authenticatable
 
     public function workoutLogs() {
         return $this->hasMany(WorkoutLog::class);
+    }
+
+    /**
+     * Get the user's timezone or default to UTC
+     */
+    public function getTimezone(): string
+    {
+        return $this->timezone ?? 'UTC';
     }
 }

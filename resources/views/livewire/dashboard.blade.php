@@ -46,9 +46,45 @@ new class extends Component {
                 <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                     {{ __('Dashboard') }}
                 </h1>
-                <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                    {{ __('Your active training programs') }}
-                </p>
+                <div class="mt-1 flex items-center gap-3">
+                    <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                        {{ __('Your active training programs') }}
+                    </p>
+                    <span class="text-zinc-400 dark:text-zinc-500">•</span>
+                    <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400"
+                         x-data="{ 
+                             timezone: '{{ auth()->user()->getTimezone() }}',
+                             updateTime() {
+                                 const now = new Date();
+                                 const formatter = new Intl.DateTimeFormat('en-US', {
+                                     timeZone: this.timezone,
+                                     month: 'short',
+                                     day: 'numeric',
+                                     year: 'numeric',
+                                     hour: 'numeric',
+                                     minute: '2-digit',
+                                     hour12: true
+                                 });
+                                 const parts = formatter.formatToParts(now);
+                                 const month = parts.find(p => p.type === 'month')?.value || '';
+                                 const day = parts.find(p => p.type === 'day')?.value || '';
+                                 const year = parts.find(p => p.type === 'year')?.value || '';
+                                 const hour = parts.find(p => p.type === 'hour')?.value || '';
+                                 const minute = parts.find(p => p.type === 'minute')?.value || '';
+                                 const period = parts.find(p => p.type === 'dayPeriod')?.value || '';
+                                 
+                                 this.$el.querySelector('[data-date]').textContent = `${month} ${day}, ${year}`;
+                                 this.$el.querySelector('[data-time]').textContent = `${hour}:${minute} ${period}`;
+                             },
+                             init() {
+                                 this.updateTime();
+                                 setInterval(() => this.updateTime(), 1000);
+                             }
+                         }">
+                        <span class="font-medium" data-date>{{ now()->setTimezone(auth()->user()->getTimezone())->format('M d, Y') }}</span>
+                        <span data-time>{{ now()->setTimezone(auth()->user()->getTimezone())->format('g:i A') }}</span>
+                    </div>
+                </div>
             </div>
             <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate>
                 {{ __('Create Program') }}
