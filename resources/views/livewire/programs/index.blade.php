@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Program;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
@@ -70,13 +71,13 @@ new class extends Component {
                         @if ($program->start_date)
                             <div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
                                 <span class="font-medium">{{ __('Start:') }}</span>
-                                <span class="ml-2">{{ $program->start_date->format('M d, Y') }}</span>
+                                <span class="ml-2">{{ Carbon::parse($program->start_date)->format('M d, Y') }}</span>
                             </div>
                         @endif
                         @if ($program->end_date)
                             <div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
                                 <span class="font-medium">{{ __('End:') }}</span>
-                                <span class="ml-2">{{ $program->end_date->format('M d, Y') }}</span>
+                                <span class="ml-2">{{ Carbon::parse($program->end_date)->format('M d, Y') }}</span>
                             </div>
                         @endif
                     </div>
