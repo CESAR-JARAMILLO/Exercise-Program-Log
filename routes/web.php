@@ -43,4 +43,7 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('workouts', 'workouts.calendar')->name('workouts.calendar');
     Volt::route('workouts/log/{activeProgram}/{date}', 'workouts.log')->name('workouts.log');
     Volt::route('workouts/history', 'workouts.history')->name('workouts.history');
+    
+    // Statistics route
+    Volt::route('statistics', 'statistics.index')->name('statistics.index');
 });

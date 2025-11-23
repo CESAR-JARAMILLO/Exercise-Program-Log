@@ -43,9 +43,14 @@ new class extends Component {
     <div class="flex h-full w-full flex-1 flex-col gap-6">
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                    {{ __('Dashboard') }}
-                </h1>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                        {{ __('Dashboard') }}
+                    </h1>
+                    <flux:button href="{{ route('statistics.index') }}" variant="ghost" size="sm" wire:navigate>
+                        {{ __('View Statistics') }}
+                    </flux:button>
+                </div>
                 <div class="mt-1 flex items-center gap-3">
                     <p class="text-sm text-zinc-600 dark:text-zinc-400">
                         {{ __('Your active training programs') }}
