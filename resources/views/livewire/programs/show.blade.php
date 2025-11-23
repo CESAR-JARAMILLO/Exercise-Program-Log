@@ -4,8 +4,7 @@ use App\Models\Program;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
-new class extends Component
-{
+new class extends Component {
     // Track which weeks are expanded
     public array $expandedWeeks = [];
 
@@ -30,6 +29,9 @@ new class extends Component
             },
             'activePrograms' => function ($query) {
                 $query->where('user_id', Auth::id())->where('status', 'active');
+            },
+            'activeProgramsStopped' => function ($query) {
+                $query->where('user_id', Auth::id())->where('status', 'stopped')->orderBy('stopped_at', 'desc')->limit(1);
             },
         ]);
 
@@ -61,7 +63,7 @@ new class extends Component
     public function toggleWeek($weekNumber): void
     {
         $weekNumber = (int) $weekNumber;
-        $this->expandedWeeks[$weekNumber] = ! ($this->expandedWeeks[$weekNumber] ?? false);
+        $this->expandedWeeks[$weekNumber] = !($this->expandedWeeks[$weekNumber] ?? false);
     }
 
     public function delete(): void
@@ -123,6 +125,18 @@ new class extends Component
                         {{ __('Calendar') }}
                     </flux:button>
                 @endif
+                <flux:button href="{{ route('active-programs.stop', $firstActiveProgram) }}" variant="ghost"
+                    wire:navigate class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                    {{ __('Stop') }}
+                </flux:button>
+            @elseif($program->activeProgramsStopped->isNotEmpty())
+                @php
+                    $lastStoppedProgram = $program->activeProgramsStopped->first();
+                @endphp
+                <flux:button href="{{ route('active-programs.restart', $lastStoppedProgram) }}" variant="primary"
+                    wire:navigate>
+                    {{ __('Restart Program') }}
+                </flux:button>
             @endif
             <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" wire:navigate>
                 {{ __('Edit') }}

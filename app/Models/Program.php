@@ -42,6 +42,12 @@ class Program extends Model
         return $this->hasMany(ActiveProgram::class);
     }
 
+    // Relationship to stopped programs
+    public function activeProgramsStopped()
+    {
+        return $this->hasMany(ActiveProgram::class);
+    }
+
     // NEW: Check if program is a template
     public function isTemplate(): bool
     {

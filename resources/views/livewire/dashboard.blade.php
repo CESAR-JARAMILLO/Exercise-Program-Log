@@ -140,6 +140,14 @@ new class extends Component {
                                     {{ __('Calendar') }}
                                 </flux:button>
                             @endif
+                            <flux:button 
+                                href="{{ route('active-programs.stop', $activeProgram) }}" 
+                                variant="ghost" 
+                                size="sm"
+                                wire:navigate
+                                class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                                {{ __('Stop') }}
+                            </flux:button>
                         </div>
                     </div>
                 @endforeach

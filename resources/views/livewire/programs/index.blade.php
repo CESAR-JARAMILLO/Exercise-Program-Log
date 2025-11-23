@@ -12,6 +12,9 @@ new class extends Component {
                 'activePrograms' => function ($query) {
                     $query->where('user_id', Auth::id())->where('status', 'active');
                 },
+                'activeProgramsStopped' => function ($query) {
+                    $query->where('user_id', Auth::id())->where('status', 'stopped')->orderBy('stopped_at', 'desc');
+                },
             ])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -168,6 +171,14 @@ new class extends Component {
                                         {{ __('Calendar') }}
                                     </flux:button>
                                 @endif
+                            @elseif($program->activeProgramsStopped->isNotEmpty())
+                                @php
+                                    $lastStoppedProgram = $program->activeProgramsStopped->first();
+                                @endphp
+                                <flux:button href="{{ route('active-programs.restart', $lastStoppedProgram) }}"
+                                    variant="primary" size="sm" wire:navigate>
+                                    {{ __('Restart') }}
+                                </flux:button>
                             @endif
                             <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" size="sm"
                                 wire:navigate>

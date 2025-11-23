@@ -35,6 +35,8 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('programs/{program}', 'programs.show')->name('programs.show');
     Volt::route('programs/{program}/edit', 'programs.edit')->name('programs.edit');
     Volt::route('programs/{program}/start', 'programs.start')->name('programs.start');
+    Volt::route('active-programs/{activeProgram}/stop', 'active-programs.stop')->name('active-programs.stop');
+    Volt::route('active-programs/{activeProgram}/restart', 'active-programs.restart')->name('active-programs.restart');
     
     // Workout logging routes
     Volt::route('workouts', 'workouts.calendar')->name('workouts.calendar');

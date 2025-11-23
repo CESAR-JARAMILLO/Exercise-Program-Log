@@ -17,10 +17,12 @@ class ActiveProgram extends Model
         'current_week',
         'current_day',
         'status',
+        'stopped_at',
     ];
 
     protected $casts = [
         'started_at' => 'date',
+        'stopped_at' => 'datetime',
     ];
 
     public function user() {
@@ -206,5 +208,76 @@ class ActiveProgram extends Model
                 'current_day' => 7,
             ]);
         }
+    }
+
+    // Stop the program (preserves all data)
+    public function stop(): void {
+        $this->update([
+            'status' => 'stopped',
+            'stopped_at' => now(),
+        ]);
+
+        // Check if this program has any other active instances
+        $hasOtherActiveInstances = ActiveProgram::where('program_id', $this->program_id)
+            ->where('user_id', $this->user_id)
+            ->where('id', '!=', $this->id)
+            ->where('status', 'active')
+            ->exists();
+
+        // If no other active instances, set program status back to template
+        if (!$hasOtherActiveInstances) {
+            $this->program->update([
+                'status' => 'template',
+            ]);
+        }
+    }
+
+    // Check if program is stopped
+    public function isStopped(): bool {
+        return $this->status === 'stopped';
+    }
+
+    // Check if program is active
+    public function isActive(): bool {
+        return $this->status === 'active';
+    }
+
+    // Check if program is completed
+    public function isCompleted(): bool {
+        return $this->status === 'completed';
+    }
+
+    // Restart a stopped program (creates new active instance)
+    public function restart($startDate = null): ActiveProgram {
+        if (!$this->isStopped()) {
+            throw new \Exception('Can only restart stopped programs');
+        }
+
+        // Use provided start date or default to today
+        if (!$startDate) {
+            $startDate = now();
+        }
+        if (!$startDate instanceof Carbon) {
+            $startDate = Carbon::parse($startDate);
+        }
+
+        // Create new active program instance
+        $newActiveProgram = ActiveProgram::create([
+            'user_id' => $this->user_id,
+            'program_id' => $this->program_id,
+            'started_at' => $startDate,
+            'current_week' => 1,
+            'current_day' => 1,
+            'status' => 'active',
+        ]);
+
+        // Update program status to active
+        $this->program->update([
+            'status' => 'active',
+            'start_date' => $startDate,
+            'end_date' => $startDate->copy()->addWeeks($this->program->length_weeks),
+        ]);
+
+        return $newActiveProgram;
     }
 }
