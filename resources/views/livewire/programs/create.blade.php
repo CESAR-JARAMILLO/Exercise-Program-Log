@@ -12,8 +12,6 @@ new class extends Component {
     public string $name = '';
     public string $description = '';
     public int $length_weeks = 0;
-    public ?string $start_date = null;
-    public ?string $end_date = null;
     public ?string $notes = null;
 
     // Nested structure: exercises[week][day][exercise_index] = [...]
@@ -84,8 +82,6 @@ new class extends Component {
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'length_weeks' => ['required', 'integer', 'min:1', 'max:52'],
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after:start_date'],
             'notes' => ['nullable', 'string'],
             'exercises' => ['required', 'array'],
         ]);
@@ -110,14 +106,13 @@ new class extends Component {
         }
 
         DB::transaction(function () use ($validated) {
-            // Create program
+            // Create program as template (no dates, status = template)
             $program = Program::create([
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'length_weeks' => $validated['length_weeks'],
-                'start_date' => $validated['start_date'] ?? null,
-                'end_date' => $validated['end_date'] ?? null,
                 'notes' => $validated['notes'] ?? null,
+                'status' => 'template',
                 'user_id' => Auth::id(),
             ]);
 
@@ -208,14 +203,8 @@ new class extends Component {
             <flux:textarea wire:model="description" :label="__('Description')" placeholder="Describe your program..."
                 rows="3" />
 
-            <div class="grid gap-4 md:grid-cols-3">
-                <flux:input wire:model.live="length_weeks" :label="__('Length (weeks)')" type="number" required
-                    min="1" max="52" placeholder="Select number of weeks" />
-
-                <flux:input wire:model="start_date" :label="__('Start Date')" type="date" />
-
-                <flux:input wire:model="end_date" :label="__('End Date')" type="date" />
-            </div>
+            <flux:input wire:model.live="length_weeks" :label="__('Length (weeks)')" type="number" required
+                min="1" max="52" placeholder="Select number of weeks" />
 
             <flux:textarea wire:model="notes" :label="__('Notes')" placeholder="Additional notes..." rows="2" />
         </div>
