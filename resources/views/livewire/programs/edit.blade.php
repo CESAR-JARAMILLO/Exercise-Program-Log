@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Volt\Component;
 
 new class extends Component {
+    public int $programId;
     public string $name = '';
     public string $description = '';
     public int $length_weeks = 0;
@@ -22,28 +23,106 @@ new class extends Component {
     // Track which weeks are expanded
     public array $expandedWeeks = [];
 
+    public function mount(): void
+    {
+        // Get program ID from route parameter
+        $programId = request()->route('program');
+        
+        // Handle both ID and model instance
+        if ($programId instanceof Program) {
+            $program = $programId;
+        } else {
+            $program = Program::findOrFail($programId);
+        }
+        
+        // Ensure user owns this program
+        abort_unless($program->user_id === Auth::id(), 403);
+        
+        // Store program ID
+        $this->programId = $program->id;
+        
+        // Load program with all relationships
+        $program = $program->load(['weeks.days.exercises' => function ($query) {
+            $query->orderBy('order');
+        }]);
+        
+        // Pre-populate form fields only if not already set
+        if (empty($this->name)) {
+            $this->name = $program->name;
+            $this->description = $program->description ?? '';
+            $this->length_weeks = $program->length_weeks;
+            $this->start_date = $program->start_date ? date('Y-m-d', strtotime($program->start_date)) : null;
+            $this->end_date = $program->end_date ? date('Y-m-d', strtotime($program->end_date)) : null;
+            $this->notes = $program->notes ?? '';
+            
+            // Pre-populate exercises structure
+            $this->exercises = [];
+            foreach ($program->weeks as $week) {
+                $weekNum = $week->week_number;
+                $this->exercises[$weekNum] = [];
+                
+                // Expand all weeks by default
+                $this->expandedWeeks[$weekNum] = true;
+                
+                foreach ($week->days as $day) {
+                    $dayNum = $day->day_number;
+                    $this->exercises[$weekNum][$dayNum] = [];
+                    
+                    foreach ($day->exercises as $exercise) {
+                        $this->exercises[$weekNum][$dayNum][] = [
+                            'id' => $exercise->id,
+                            'name' => $exercise->name,
+                            'type' => $exercise->type,
+                            'sets' => $exercise->sets,
+                            'reps' => $exercise->reps,
+                            'weight' => $exercise->weight,
+                            'distance' => $exercise->distance,
+                            'time_seconds' => $exercise->time_seconds,
+                        ];
+                    }
+                }
+            }
+        }
+    }
+
+    public function with(): array
+    {
+        $program = Program::with(['weeks.days.exercises' => function ($query) {
+            $query->orderBy('order');
+        }])->findOrFail($this->programId);
+        
+        // Ensure user owns this program
+        abort_unless($program->user_id === Auth::id(), 403);
+        
+        return [
+            'program' => $program,
+        ];
+    }
+
     public function updatedLengthWeeks($value): void
     {
-        // Reinitialize when weeks change
-        $this->initializeWeeks();
+        // If increasing weeks, add empty days for new weeks
+        if ($value > count($this->exercises)) {
+            for ($week = count($this->exercises) + 1; $week <= $value; $week++) {
+                $this->exercises[$week] = [];
+                for ($day = 1; $day <= 7; $day++) {
+                    $this->exercises[$week][$day] = [];
+                }
+                $this->expandedWeeks[$week] = true;
+            }
+        } else {
+            // If decreasing weeks, remove excess weeks
+            for ($week = $value + 1; $week <= count($this->exercises); $week++) {
+                unset($this->exercises[$week]);
+                unset($this->expandedWeeks[$week]);
+            }
+        }
     }
 
     public function toggleWeek($week): void
     {
         $week = (int) $week;
         $this->expandedWeeks[$week] = !($this->expandedWeeks[$week] ?? false);
-    }
-
-    protected function initializeWeeks(): void
-    {
-        $this->exercises = [];
-        for ($week = 1; $week <= $this->length_weeks; $week++) {
-            for ($day = 1; $day <= 7; $day++) {
-                $this->exercises[$week][$day] = [];
-            }
-            // Expand all weeks by default
-            $this->expandedWeeks[$week] = true;
-        }
     }
 
     public function addExercise($week, $day): void
@@ -78,7 +157,7 @@ new class extends Component {
         }
     }
 
-    public function save(): void
+    public function update(): void
     {
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -109,75 +188,128 @@ new class extends Component {
             }
         }
 
-        DB::transaction(function () use ($validated) {
-            // Create program
-            $program = Program::create([
+        $program = Program::findOrFail($this->programId);
+        abort_unless($program->user_id === Auth::id(), 403);
+
+        DB::transaction(function () use ($validated, $program) {
+            // Update program
+            $program->update([
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'length_weeks' => $validated['length_weeks'],
                 'start_date' => $validated['start_date'] ?? null,
                 'end_date' => $validated['end_date'] ?? null,
                 'notes' => $validated['notes'] ?? null,
-                'user_id' => Auth::id(),
             ]);
 
-            // Create weeks, days, and exercises
+            // Get existing weeks
+            $existingWeeks = $program->weeks->keyBy('week_number');
+            $existingWeekIds = $existingWeeks->pluck('id')->toArray();
+
+            // Process weeks, days, and exercises
+            $processedWeekIds = [];
+            
             foreach ($this->exercises as $weekNum => $days) {
-                $programWeek = ProgramWeek::create([
-                    'program_id' => $program->id,
-                    'week_number' => $weekNum,
-                ]);
+                // Get or create week
+                if (isset($existingWeeks[$weekNum])) {
+                    $programWeek = $existingWeeks[$weekNum];
+                    $processedWeekIds[] = $programWeek->id;
+                } else {
+                    $programWeek = ProgramWeek::create([
+                        'program_id' => $program->id,
+                        'week_number' => $weekNum,
+                    ]);
+                    $processedWeekIds[] = $programWeek->id;
+                }
+
+                // Get existing days for this week
+                $existingDays = $programWeek->days->keyBy('day_number');
+                $processedDayIds = [];
 
                 foreach ($days as $dayNum => $dayExercises) {
-                    $programDay = ProgramDay::create([
-                        'program_week_id' => $programWeek->id,
-                        'day_number' => $dayNum,
-                        'label' => "Day $dayNum",
-                    ]);
+                    // Get or create day
+                    if (isset($existingDays[$dayNum])) {
+                        $programDay = $existingDays[$dayNum];
+                        $processedDayIds[] = $programDay->id;
+                    } else {
+                        $programDay = ProgramDay::create([
+                            'program_week_id' => $programWeek->id,
+                            'day_number' => $dayNum,
+                            'label' => "Day $dayNum",
+                        ]);
+                        $processedDayIds[] = $programDay->id;
+                    }
 
-                    // Add exercises for this day (only save exercises with names)
+                    // Get existing exercises for this day
+                    $existingExercises = $programDay->exercises->keyBy('id');
+                    $processedExerciseIds = [];
+
+                    // Update or create exercises
                     foreach ($dayExercises as $order => $exercise) {
                         if (!empty($exercise['name'])) {
-                            DayExercise::create([
-                                'program_day_id' => $programDay->id,
-                                'name' => $exercise['name'],
-                                'type' => $exercise['type'] ?? 'strength',
-                                'sets' => $exercise['sets'] ?? null,
-                                'reps' => $exercise['reps'] ?? null,
-                                'weight' => $exercise['weight'] ?? null,
-                                'distance' => $exercise['distance'] ?? null,
-                                'time_seconds' => $exercise['time_seconds'] ?? null,
-                                'order' => $order + 1,
-                            ]);
+                            if (isset($exercise['id']) && isset($existingExercises[$exercise['id']])) {
+                                // Update existing exercise
+                                $existingExercises[$exercise['id']]->update([
+                                    'name' => $exercise['name'],
+                                    'type' => $exercise['type'] ?? 'strength',
+                                    'sets' => $exercise['sets'] ?? null,
+                                    'reps' => $exercise['reps'] ?? null,
+                                    'weight' => $exercise['weight'] ?? null,
+                                    'distance' => $exercise['distance'] ?? null,
+                                    'time_seconds' => $exercise['time_seconds'] ?? null,
+                                    'order' => $order + 1,
+                                ]);
+                                $processedExerciseIds[] = $exercise['id'];
+                            } else {
+                                // Create new exercise
+                                $newExercise = DayExercise::create([
+                                    'program_day_id' => $programDay->id,
+                                    'name' => $exercise['name'],
+                                    'type' => $exercise['type'] ?? 'strength',
+                                    'sets' => $exercise['sets'] ?? null,
+                                    'reps' => $exercise['reps'] ?? null,
+                                    'weight' => $exercise['weight'] ?? null,
+                                    'distance' => $exercise['distance'] ?? null,
+                                    'time_seconds' => $exercise['time_seconds'] ?? null,
+                                    'order' => $order + 1,
+                                ]);
+                                $processedExerciseIds[] = $newExercise->id;
+                            }
                         }
                     }
+
+                    // Delete exercises that were removed
+                    $programDay->exercises()->whereNotIn('id', $processedExerciseIds)->delete();
                 }
+
+                // Delete days that were removed
+                $programWeek->days()->whereNotIn('id', $processedDayIds)->delete();
             }
+
+            // Delete weeks that were removed
+            $program->weeks()->whereNotIn('id', $processedWeekIds)->delete();
         });
 
-        session()->flash('success', __('Program created successfully!'));
-        $this->redirect(route('programs.show', Program::where('user_id', Auth::id())->latest()->first()));
+        session()->flash('success', __('Program updated successfully!'));
+        $this->redirect(route('programs.show', $program));
     }
 }; ?>
 
 <section class="w-full">
     @if (session('success'))
-        <div
-            class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/50 dark:text-green-200">
+        <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/50 dark:text-green-200">
             {{ session('success') }}
         </div>
     @endif
 
     @if (session('error'))
-        <div
-            class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200">
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200">
             {{ session('error') }}
         </div>
     @endif
 
     @if ($errors->any())
-        <div
-            class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200">
+        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200">
             <ul class="list-disc list-inside space-y-1">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -188,14 +320,14 @@ new class extends Component {
 
     <div class="mb-6">
         <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            {{ __('Create Program') }}
+            {{ __('Edit Program') }}
         </h1>
         <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {{ __('Create a complete training program with all weeks, days, and exercises') }}
+            {{ __('Update your training program with all weeks, days, and exercises') }}
         </p>
     </div>
 
-    <form wire:submit="save" class="space-y-8">
+    <form wire:submit="update" class="space-y-8">
         <!-- Program Details -->
         <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 space-y-4">
             <h2 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
@@ -384,12 +516,13 @@ new class extends Component {
         <!-- Submit Button -->
         <div class="flex items-center gap-4 border-t border-neutral-200 dark:border-neutral-700 pt-6">
             <flux:button type="submit" variant="primary" class="w-full md:w-auto">
-                {{ __('Create Complete Program') }}
+                {{ __('Update Program') }}
             </flux:button>
 
-            <flux:button href="{{ route('programs.index') }}" variant="ghost" wire:navigate>
+            <flux:button href="{{ route('programs.show', $program) }}" variant="ghost" wire:navigate>
                 {{ __('Cancel') }}
             </flux:button>
         </div>
     </form>
 </section>
+

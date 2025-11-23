@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Program;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
@@ -15,11 +14,30 @@ new class extends Component {
 
     public function delete(Program $program): void
     {
+        // Ensure user owns this program
+        abort_unless($program->user_id === Auth::id(), 403);
+
         $program->delete();
+
+        session()->flash('success', __('Program deleted successfully.'));
     }
 }; ?>
 
 <section class="w-full">
+    @if (session('success'))
+        <div
+            class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/50 dark:text-green-200">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div
+            class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200">
+            {{ session('error') }}
+        </div>
+    @endif
+
     <div class="mb-6 flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
@@ -71,13 +89,13 @@ new class extends Component {
                         @if ($program->start_date)
                             <div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
                                 <span class="font-medium">{{ __('Start:') }}</span>
-                                <span class="ml-2">{{ Carbon::parse($program->start_date)->format('M d, Y') }}</span>
+                                <span class="ml-2">{{ $program->start_date->format('M d, Y') }}</span>
                             </div>
                         @endif
                         @if ($program->end_date)
                             <div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
                                 <span class="font-medium">{{ __('End:') }}</span>
-                                <span class="ml-2">{{ Carbon::parse($program->end_date)->format('M d, Y') }}</span>
+                                <span class="ml-2">{{ $program->end_date->format('M d, Y') }}</span>
                             </div>
                         @endif
                     </div>
