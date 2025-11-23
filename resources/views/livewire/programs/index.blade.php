@@ -7,8 +7,17 @@ use Livewire\Volt\Component;
 new class extends Component {
     public function with(): array
     {
+        $programs = Program::where('user_id', Auth::id())
+            ->with([
+                'activePrograms' => function ($query) {
+                    $query->where('user_id', Auth::id())->where('status', 'active');
+                },
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         return [
-            'programs' => Program::where('user_id', Auth::id())->orderBy('created_at', 'desc')->get(),
+            'programs' => $programs,
         ];
     }
 
@@ -68,9 +77,22 @@ new class extends Component {
                     class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex-1">
-                            <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                                {{ $program->name }}
-                            </h3>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                                    {{ $program->name }}
+                                </h3>
+                                @if ($program->isTemplate())
+                                    <span
+                                        class="rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
+                                        {{ __('Template') }}
+                                    </span>
+                                @elseif($program->isActive())
+                                    <span
+                                        class="rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300">
+                                        {{ __('Active') }}
+                                    </span>
+                                @endif
+                            </div>
                             @if ($program->description)
                                 <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
                                     {{ $program->description }}
@@ -82,20 +104,20 @@ new class extends Component {
                     <div class="space-y-2 mb-4">
                         @if ($program->length_weeks)
                             <div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
-                                <span class="font-medium">{{ __('Weeks:') }}</span>
-                                <span class="ml-2">{{ $program->length_weeks }}</span>
+                                <span class="font-medium">{{ __('Duration:') }}</span>
+                                <span class="ml-2">{{ $program->length_weeks }} {{ __('Weeks') }}</span>
                             </div>
                         @endif
-                        @if ($program->start_date)
+                        @if ($program->isActive() && $program->start_date)
                             <div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
-                                <span class="font-medium">{{ __('Start:') }}</span>
+                                <span class="font-medium">{{ __('Started:') }}</span>
                                 <span class="ml-2">{{ $program->start_date->format('M d, Y') }}</span>
                             </div>
                         @endif
-                        @if ($program->end_date)
+                        @if ($program->activePrograms->isNotEmpty())
                             <div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
-                                <span class="font-medium">{{ __('End:') }}</span>
-                                <span class="ml-2">{{ $program->end_date->format('M d, Y') }}</span>
+                                <span class="font-medium">{{ __('Active Instances:') }}</span>
+                                <span class="ml-2">{{ $program->activePrograms->count() }}</span>
                             </div>
                         @endif
                     </div>
@@ -105,10 +127,17 @@ new class extends Component {
                             wire:navigate>
                             {{ __('View') }}
                         </flux:button>
-                        <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" size="sm"
-                            wire:navigate>
-                            {{ __('Edit') }}
-                        </flux:button>
+                        @if ($program->isTemplate())
+                            <flux:button href="{{ route('programs.start', $program) }}" variant="primary"
+                                size="sm" wire:navigate>
+                                {{ __('Start') }}
+                            </flux:button>
+                        @else
+                            <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" size="sm"
+                                wire:navigate>
+                                {{ __('Edit') }}
+                            </flux:button>
+                        @endif
                         <flux:button wire:click="delete({{ $program->id }})"
                             wire:confirm="{{ __('Are you sure you want to delete this program?') }}" variant="ghost"
                             size="sm"
