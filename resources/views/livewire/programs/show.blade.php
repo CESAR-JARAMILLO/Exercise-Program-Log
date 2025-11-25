@@ -138,6 +138,12 @@ new class extends Component {
                     {{ __('Restart Program') }}
                 </flux:button>
             @endif
+            <flux:button href="{{ route('programs.preview', $program) }}" variant="ghost" target="_blank">
+                {{ __('Preview') }}
+            </flux:button>
+            <flux:button href="{{ route('programs.export-pdf', $program) }}" variant="ghost">
+                {{ __('Export PDF') }}
+            </flux:button>
             <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" wire:navigate>
                 {{ __('Edit') }}
             </flux:button>

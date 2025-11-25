@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ProgramPdfController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
@@ -36,6 +37,8 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('programs/{program}', 'programs.show')->name('programs.show');
     Volt::route('programs/{program}/edit', 'programs.edit')->name('programs.edit');
     Volt::route('programs/{program}/start', 'programs.start')->name('programs.start');
+    Route::get('programs/{program}/preview', [ProgramPdfController::class, 'preview'])->name('programs.preview');
+    Route::get('programs/{program}/export-pdf', [ProgramPdfController::class, 'export'])->name('programs.export-pdf');
     Volt::route('active-programs/{activeProgram}/stop', 'active-programs.stop')->name('active-programs.stop');
     Volt::route('active-programs/{activeProgram}/restart', 'active-programs.restart')->name('active-programs.restart');
     
