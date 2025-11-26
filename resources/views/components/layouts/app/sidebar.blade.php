@@ -19,6 +19,13 @@
                 </flux:navlist.group>
             </flux:navlist>
 
+            @if(!auth()->user()->isTrainer())
+                <div class="mx-4 my-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+                    <p class="font-medium">{{ __('Upgrade to Trainer') }}</p>
+                    <p class="mt-1">{{ __('Share programs with clients and view their analytics.') }}</p>
+                </div>
+            @endif
+
             <flux:spacer />
 
             <flux:navlist variant="outline">
