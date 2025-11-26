@@ -110,7 +110,7 @@ new class extends Component {
                         @elseif(auth()->user()->isTrainer()) bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
                         @elseif(auth()->user()->isProTrainer()) bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300
                         @endif">
-                        {{ config("subscription.tiers." . auth()->user()->subscription_tier . ".name", 'Free') }}
+                        {{ config("subscription.tiers." . auth()->user()->subscription_tier->value . ".name", 'Free') }}
                     </span>
                     @if(auth()->user()->getMaxPrograms() !== null)
                         <span class="text-sm text-zinc-600 dark:text-zinc-400">

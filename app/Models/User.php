@@ -51,6 +51,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'subscription_tier' => SubscriptionTier::class,
         ];
     }
 
@@ -159,9 +160,9 @@ class User extends Authenticatable
     /**
      * Get the user's subscription tier
      */
-    public function getSubscriptionTier(): string
+    public function getSubscriptionTier(): SubscriptionTier
     {
-        return $this->subscription_tier ?? SubscriptionTier::FREE->value;
+        return $this->subscription_tier ?? SubscriptionTier::FREE;
     }
 
     /**
@@ -169,7 +170,7 @@ class User extends Authenticatable
      */
     public function isFree(): bool
     {
-        return $this->subscription_tier === SubscriptionTier::FREE->value;
+        return $this->getSubscriptionTier() === SubscriptionTier::FREE;
     }
 
     /**
@@ -177,7 +178,7 @@ class User extends Authenticatable
      */
     public function isBasic(): bool
     {
-        return $this->subscription_tier === SubscriptionTier::BASIC->value;
+        return $this->getSubscriptionTier() === SubscriptionTier::BASIC;
     }
 
     /**
@@ -185,9 +186,10 @@ class User extends Authenticatable
      */
     public function isTrainer(): bool
     {
-        return in_array($this->subscription_tier, [
-            SubscriptionTier::TRAINER->value,
-            SubscriptionTier::PRO_TRAINER->value,
+        $tier = $this->getSubscriptionTier();
+        return in_array($tier, [
+            SubscriptionTier::TRAINER,
+            SubscriptionTier::PRO_TRAINER,
         ]);
     }
 
@@ -196,7 +198,7 @@ class User extends Authenticatable
      */
     public function isProTrainer(): bool
     {
-        return $this->subscription_tier === SubscriptionTier::PRO_TRAINER->value;
+        return $this->getSubscriptionTier() === SubscriptionTier::PRO_TRAINER;
     }
 
     /**
@@ -220,7 +222,8 @@ class User extends Authenticatable
      */
     public function hasFeature(string $feature): bool
     {
-        $tierConfig = config("subscription.tiers.{$this->subscription_tier}");
+        $tierValue = $this->getSubscriptionTier()->value;
+        $tierConfig = config("subscription.tiers.{$tierValue}");
         
         if (!$tierConfig) {
             return false;
@@ -232,14 +235,8 @@ class User extends Authenticatable
     /**
      * Upgrade user to a different tier (useful for testing/admin)
      */
-    public function upgradeTo(string $tier): void
+    public function upgradeTo(SubscriptionTier $tier): void
     {
-        $validTiers = SubscriptionTier::values();
-        
-        if (!in_array($tier, $validTiers)) {
-            throw new \InvalidArgumentException("Invalid tier: {$tier}. Valid tiers: " . implode(', ', $validTiers));
-        }
-
         $this->update(['subscription_tier' => $tier]);
     }
 
@@ -248,7 +245,8 @@ class User extends Authenticatable
      */
     public function getMaxPrograms(): ?int
     {
-        $tierConfig = config("subscription.tiers.{$this->subscription_tier}");
+        $tierValue = $this->getSubscriptionTier()->value;
+        $tierConfig = config("subscription.tiers.{$tierValue}");
         
         return $tierConfig['max_programs'] ?? null;
     }
@@ -282,5 +280,99 @@ class User extends Authenticatable
     public function hasReachedProgramLimit(): bool
     {
         return !$this->canCreateProgram();
+    }
+
+    // --- Trainer-Client Relationships ---
+
+    /**
+     * Relationships where this user is the trainer
+     */
+    public function trainerRelationships()
+    {
+        return $this->hasMany(TrainerClientRelationship::class, 'trainer_id');
+    }
+
+    /**
+     * Relationships where this user is the client
+     */
+    public function clientRelationships()
+    {
+        return $this->hasMany(TrainerClientRelationship::class, 'client_id');
+    }
+
+    /**
+     * Get accepted trainers for this user (when user is client)
+     */
+    public function trainers()
+    {
+        return $this->belongsToMany(User::class, 'trainer_client_relationships', 'client_id', 'trainer_id')
+            ->wherePivot('status', 'accepted')
+            ->withPivot(['status', 'invited_at', 'accepted_at', 'invited_by'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Get accepted clients for this user (when user is trainer)
+     */
+    public function clients()
+    {
+        return $this->belongsToMany(User::class, 'trainer_client_relationships', 'trainer_id', 'client_id')
+            ->wherePivot('status', 'accepted')
+            ->withPivot(['status', 'invited_at', 'accepted_at', 'invited_by'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if user has client relationship (accepted)
+     */
+    public function hasClient($clientId): bool
+    {
+        return $this->trainerRelationships()
+            ->where('client_id', $clientId)
+            ->where('status', 'accepted')
+            ->exists();
+    }
+
+    /**
+     * Check if user has trainer relationship (accepted)
+     */
+    public function hasTrainer($trainerId): bool
+    {
+        return $this->clientRelationships()
+            ->where('trainer_id', $trainerId)
+            ->where('status', 'accepted')
+            ->exists();
+    }
+
+    /**
+     * Get count of accepted clients (for tier limits)
+     */
+    public function getClientsCount(): int
+    {
+        return $this->trainerRelationships()
+            ->where('status', 'accepted')
+            ->count();
+    }
+
+    /**
+     * Get pending requests where user is client
+     */
+    public function getPendingClientRequests()
+    {
+        return $this->clientRelationships()
+            ->where('status', 'pending')
+            ->with('trainer')
+            ->get();
+    }
+
+    /**
+     * Get pending requests where user is trainer
+     */
+    public function getPendingTrainerRequests()
+    {
+        return $this->trainerRelationships()
+            ->where('status', 'pending')
+            ->with('client')
+            ->get();
     }
 }

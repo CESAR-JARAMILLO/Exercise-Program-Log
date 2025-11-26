@@ -49,4 +49,12 @@ Route::middleware(['auth'])->group(function () {
     
     // Statistics route
     Volt::route('statistics', 'statistics.index')->name('statistics.index');
+    
+    // Trainer routes (protected by tier middleware)
+    Volt::route('trainers/clients', 'trainers.clients')
+        ->middleware('tier:trainer')
+        ->name('trainers.clients');
+    
+    // Client routes (all users can receive trainer requests)
+    Volt::route('clients/requests', 'clients.requests')->name('clients.requests');
 });
