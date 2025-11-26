@@ -57,6 +57,12 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('trainers/clients', 'trainers.clients')
         ->middleware('tier:trainer')
         ->name('trainers.clients');
+    Volt::route('trainers/analytics', 'trainers.analytics.index')
+        ->middleware('tier:trainer')
+        ->name('trainers.analytics.index');
+    Volt::route('trainers/analytics/{client}', 'trainers.analytics.client')
+        ->middleware('tier:trainer')
+        ->name('trainers.analytics.client');
     
     // Client routes (all users can receive trainer requests)
     Volt::route('clients/requests', 'clients.requests')->name('clients.requests');

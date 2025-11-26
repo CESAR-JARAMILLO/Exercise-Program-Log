@@ -17,6 +17,27 @@
                     <flux:navlist.item icon="clipboard-document-list" :href="route('programs.index')" :current="request()->routeIs('programs.*')" wire:navigate>{{ __('Programs') }}</flux:navlist.item>
                     <flux:navlist.item icon="chart-bar" :href="route('statistics.index')" :current="request()->routeIs('statistics.*')" wire:navigate>{{ __('Statistics') }}</flux:navlist.item>
                 </flux:navlist.group>
+
+                @if(auth()->user()->isTrainer())
+                    <flux:navlist.group :heading="__('Trainer Tools')" class="grid">
+                        <flux:navlist.item
+                            icon="users"
+                            :href="route('trainers.clients')"
+                            :current="request()->routeIs('trainers.clients')"
+                            wire:navigate
+                        >
+                            {{ __('Clients') }}
+                        </flux:navlist.item>
+                        <flux:navlist.item
+                            icon="presentation-chart-line"
+                            :href="route('trainers.analytics.index')"
+                            :current="request()->routeIs('trainers.analytics.*')"
+                            wire:navigate
+                        >
+                            {{ __('Analytics') }}
+                        </flux:navlist.item>
+                    </flux:navlist.group>
+                @endif
             </flux:navlist>
 
             @if(!auth()->user()->isTrainer())
