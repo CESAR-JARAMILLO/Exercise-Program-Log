@@ -66,4 +66,7 @@ Route::middleware(['auth'])->group(function () {
     
     // Client routes (all users can receive trainer requests)
     Volt::route('clients/requests', 'clients.requests')->name('clients.requests');
+    
+    // Subscription routes
+    Volt::route('subscriptions/plans', 'subscriptions.plans')->name('subscriptions.plans');
 });

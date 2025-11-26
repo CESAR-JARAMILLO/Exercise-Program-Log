@@ -2,6 +2,7 @@
     'feature' => null,
     'requiredTier' => null,
     'message' => null,
+    'showLink' => true,
 ])
 
 @php
@@ -38,6 +39,18 @@
         <div class="flex-1">
             <p class="font-medium">{{ __('Upgrade Required') }}</p>
             <p class="mt-1">{{ $message }}</p>
+            @if($showLink)
+                <div class="mt-3">
+                    <flux:button 
+                        href="{{ route('subscriptions.plans') }}" 
+                        variant="ghost" 
+                        size="sm"
+                        wire:navigate
+                    >
+                        {{ __('View Plans') }}
+                    </flux:button>
+                </div>
+            @endif
             @if(isset($slot) && !empty(trim($slot)))
                 <div class="mt-2">
                     {{ $slot }}
