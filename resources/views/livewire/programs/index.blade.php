@@ -7,17 +7,44 @@ use Livewire\Volt\Component;
 new class extends Component {
     public function with(): array
     {
-        $programs = Program::where('user_id', Auth::id())
+        $user = Auth::user();
+
+        // Get owned programs
+        $ownedPrograms = Program::where('user_id', $user->id)
             ->with([
-                'activePrograms' => function ($query) {
-                    $query->where('user_id', Auth::id())->where('status', 'active');
+                'activePrograms' => function ($query) use ($user) {
+                    $query->where('user_id', $user->id)->where('status', 'active');
                 },
-                'activeProgramsStopped' => function ($query) {
-                    $query->where('user_id', Auth::id())->where('status', 'stopped')->orderBy('stopped_at', 'desc');
+                'activeProgramsStopped' => function ($query) use ($user) {
+                    $query->where('user_id', $user->id)->where('status', 'stopped')->orderBy('stopped_at', 'desc');
                 },
+                'assignments.trainer',
             ])
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // Get assigned programs (programs assigned to this user as a client)
+        $assignedPrograms = Program::whereHas('assignments', function ($query) use ($user) {
+            $query->where('client_id', $user->id);
+        })
+            ->with([
+                'activePrograms' => function ($query) use ($user) {
+                    $query->where('user_id', $user->id)->where('status', 'active');
+                },
+                'activeProgramsStopped' => function ($query) use ($user) {
+                    $query->where('user_id', $user->id)->where('status', 'stopped')->orderBy('stopped_at', 'desc');
+                },
+                'assignments' => function ($query) use ($user) {
+                    $query->where('client_id', $user->id);
+                },
+                'assignments.trainer',
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Combine and merge (avoid duplicates if a program is both owned and assigned)
+        $allProgramIds = $ownedPrograms->pluck('id')->merge($assignedPrograms->pluck('id'))->unique();
+        $programs = $ownedPrograms->merge($assignedPrograms)->unique('id');
 
         // Get today's workout status for each active program
         $activeProgramsWithWorkouts = [];
@@ -33,13 +60,11 @@ new class extends Component {
             }
         }
 
-        $user = Auth::user();
-
         return [
             'programs' => $programs,
             'activeProgramsWithWorkouts' => $activeProgramsWithWorkouts,
             'user' => $user,
-            'programCount' => $user->getProgramCount(),
+            'programCount' => $user->getProgramCount(), // Only counts owned programs
             'maxPrograms' => $user->getMaxPrograms(),
             'canCreateProgram' => $user->canCreateProgram(),
         ];
@@ -47,8 +72,8 @@ new class extends Component {
 
     public function delete(Program $program): void
     {
-        // Ensure user owns this program
-        abort_unless($program->user_id === Auth::id(), 403);
+        // Ensure user can delete this program (only owner/trainer can delete)
+        abort_unless($program->canBeDeletedBy(Auth::user()), 403);
 
         $program->delete();
 
@@ -132,13 +157,25 @@ new class extends Component {
                     class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex-1">
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
                                 <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                                     {{ $program->name }}
                                 </h3>
+                                @if ($program->isAssignedToMe())
+                                    @php
+                                        $assignment = $program->assignments->where('client_id', Auth::id())->first();
+                                        $trainer = $assignment ? $assignment->trainer : null;
+                                    @endphp
+                                    @if ($trainer)
+                                        <span
+                                            class="rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
+                                            {{ __('Assigned by :name', ['name' => $trainer->name]) }}
+                                        </span>
+                                    @endif
+                                @endif
                                 @if ($program->isTemplate())
                                     <span
-                                        class="rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
+                                        class="rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-1 text-xs font-medium text-neutral-700 dark:text-neutral-300">
                                         {{ __('Template') }}
                                     </span>
                                 @elseif($program->isActive())
@@ -217,17 +254,21 @@ new class extends Component {
                                     {{ __('Restart') }}
                                 </flux:button>
                             @endif
-                            <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" size="sm"
-                                wire:navigate>
-                                {{ __('Edit') }}
+                            @if ($program->canBeEditedBy(Auth::user()))
+                                <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" size="sm"
+                                    wire:navigate>
+                                    {{ __('Edit') }}
+                                </flux:button>
+                            @endif
+                        @endif
+                        @if ($program->canBeDeletedBy(Auth::user()))
+                            <flux:button wire:click="delete({{ $program->id }})"
+                                wire:confirm="{{ __('Are you sure you want to delete this program?') }}" variant="ghost"
+                                size="sm"
+                                class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                                {{ __('Delete') }}
                             </flux:button>
                         @endif
-                        <flux:button wire:click="delete({{ $program->id }})"
-                            wire:confirm="{{ __('Are you sure you want to delete this program?') }}" variant="ghost"
-                            size="sm"
-                            class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
-                            {{ __('Delete') }}
-                        </flux:button>
                     </div>
                 </div>
             @endforeach

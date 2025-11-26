@@ -20,8 +20,8 @@ new class extends Component {
             $program = Program::findOrFail($programId);
         }
 
-        // Ensure user owns this program
-        abort_unless($program->user_id === Auth::id(), 403);
+        // Ensure user can view this program (owner, trainer, or assigned client)
+        abort_unless($program->canBeViewedBy(Auth::user()), 403);
 
         $program = $program->load([
             'weeks.days.exercises' => function ($query) {
@@ -33,6 +33,8 @@ new class extends Component {
             'activeProgramsStopped' => function ($query) {
                 $query->where('user_id', Auth::id())->where('status', 'stopped')->orderBy('stopped_at', 'desc')->limit(1);
             },
+            'assignments.client',
+            'trainer',
         ]);
 
         // Get today's workout status for active programs
@@ -54,9 +56,20 @@ new class extends Component {
             }
         }
 
+        $user = Auth::user();
+        $isAssigned = $program->isAssignedToMe();
+        $assignedBy = null;
+        if ($isAssigned) {
+            $assignment = $program->assignments()->where('client_id', $user->id)->first();
+            $assignedBy = $assignment ? $assignment->trainer : null;
+        }
+
         return [
             'program' => $program,
             'activeProgramsWithWorkouts' => $activeProgramsWithWorkouts,
+            'user' => $user,
+            'isAssigned' => $isAssigned,
+            'assignedBy' => $assignedBy,
         ];
     }
 
@@ -70,7 +83,7 @@ new class extends Component {
     {
         $programId = request()->route('program');
         $program = $programId instanceof Program ? $programId : Program::findOrFail($programId);
-        abort_unless($program->user_id === Auth::id(), 403);
+        abort_unless($program->canBeDeletedBy(Auth::user()), 403);
         $program->delete();
         session()->flash('success', __('Program deleted successfully.'));
         $this->redirect(route('programs.index'));
@@ -94,15 +107,31 @@ new class extends Component {
 
     <div class="mb-6 flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                {{ $program->name }}
-            </h1>
+            <div class="flex items-center gap-2">
+                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                    {{ $program->name }}
+                </h1>
+                @if ($isAssigned && $assignedBy)
+                    <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-3 py-1 text-sm font-medium">
+                        {{ __('Assigned by :name', ['name' => $assignedBy->name]) }}
+                    </span>
+                @endif
+            </div>
             <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 {{ $program->description ?? __('View your training program details') }}
             </p>
         </div>
         <div class="flex items-center gap-2">
-            @if ($program->isTemplate())
+            @if ($user->isTrainer() && $program->isTemplate() && ($program->user_id === $user->id || $program->trainer_id === $user->id))
+                <flux:button href="{{ route('programs.assign', $program) }}" variant="primary" wire:navigate>
+                    {{ __('Assign to Client') }}
+                </flux:button>
+            @endif
+            @if ($program->isTemplate() && !$isAssigned)
+                <flux:button href="{{ route('programs.start', $program) }}" variant="primary" wire:navigate>
+                    {{ __('Start Program') }}
+                </flux:button>
+            @elseif ($program->isTemplate() && $isAssigned)
                 <flux:button href="{{ route('programs.start', $program) }}" variant="primary" wire:navigate>
                     {{ __('Start Program') }}
                 </flux:button>
@@ -144,15 +173,60 @@ new class extends Component {
             <flux:button href="{{ route('programs.export-pdf', $program) }}" variant="ghost">
                 {{ __('Export PDF') }}
             </flux:button>
-            <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" wire:navigate>
-                {{ __('Edit') }}
-            </flux:button>
-            <flux:button wire:click="delete" wire:confirm="{{ __('Are you sure you want to delete this program?') }}"
-                variant="ghost" class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
-                {{ __('Delete') }}
-            </flux:button>
+            @if ($program->canBeEditedBy($user))
+                <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" wire:navigate>
+                    {{ __('Edit') }}
+                </flux:button>
+            @endif
+            @if ($program->canBeDeletedBy($user))
+                <flux:button wire:click="delete" wire:confirm="{{ __('Are you sure you want to delete this program?') }}"
+                    variant="ghost" class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                    {{ __('Delete') }}
+                </flux:button>
+            @endif
         </div>
     </div>
+
+    <!-- Assigned Clients (for trainers) -->
+    @if ($user->isTrainer() && ($program->user_id === $user->id || $program->trainer_id === $user->id) && $program->assignments->isNotEmpty())
+        <div class="mb-6 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
+            <h2 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                {{ __('Assigned Clients') }}
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700">
+                    <thead class="bg-neutral-50 dark:bg-neutral-800">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{{ __('Client Name') }}</th>
+                            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{{ __('Email') }}</th>
+                            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{{ __('Status') }}</th>
+                            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{{ __('Assigned At') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-neutral-200 dark:divide-neutral-700 bg-white dark:bg-neutral-900">
+                        @foreach ($program->assignments as $assignment)
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900 dark:text-neutral-100">{{ $assignment->client->name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-500 dark:text-neutral-400">{{ $assignment->client->email }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+                                        @if($assignment->status === 'assigned') bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300
+                                        @elseif($assignment->status === 'started') bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+                                        @elseif($assignment->status === 'completed') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                                        @endif">
+                                        {{ ucfirst($assignment->status) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-500 dark:text-neutral-400">
+                                    {{ $assignment->assigned_at->format('M d, Y') }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
 
     <!-- Program Details -->
     <div class="mb-6 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">

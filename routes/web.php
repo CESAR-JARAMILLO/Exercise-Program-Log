@@ -37,6 +37,9 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('programs/{program}', 'programs.show')->name('programs.show');
     Volt::route('programs/{program}/edit', 'programs.edit')->name('programs.edit');
     Volt::route('programs/{program}/start', 'programs.start')->name('programs.start');
+    Volt::route('programs/{program}/assign', 'programs.assign')
+        ->middleware('tier:trainer')
+        ->name('programs.assign');
     Route::get('programs/{program}/preview', [ProgramPdfController::class, 'preview'])->name('programs.preview');
     Route::get('programs/{program}/export-pdf', [ProgramPdfController::class, 'export'])->name('programs.export-pdf');
     Volt::route('active-programs/{activeProgram}/stop', 'active-programs.stop')->name('active-programs.stop');

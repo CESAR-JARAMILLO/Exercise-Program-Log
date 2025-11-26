@@ -12,6 +12,7 @@ class Program extends Model
 
     protected $fillable = [
         'user_id',
+        'trainer_id',
         'name',
         'length_weeks',
         'description',
@@ -31,9 +32,26 @@ class Program extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function trainer()
+    {
+        return $this->belongsTo(User::class, 'trainer_id');
+    }
+
     public function weeks()
     {
         return $this->hasMany(ProgramWeek::class);
+    }
+
+    public function assignments()
+    {
+        return $this->hasMany(ProgramAssignment::class);
+    }
+
+    public function assignedClients()
+    {
+        return $this->belongsToMany(User::class, 'program_assignments', 'program_id', 'client_id')
+            ->withPivot('status', 'assigned_at')
+            ->withTimestamps();
     }
 
     // NEW: Relationship to active programs
@@ -86,5 +104,89 @@ class Program extends Model
         ]);
 
         return $activeProgram;
+    }
+
+    // Program Assignment Methods
+    public function assignToClient(int $clientId, int $trainerId): ProgramAssignment
+    {
+        return ProgramAssignment::create([
+            'program_id' => $this->id,
+            'trainer_id' => $trainerId,
+            'client_id' => $clientId,
+            'assigned_at' => now(),
+            'status' => 'assigned',
+        ]);
+    }
+
+    public function unassignFromClient(int $clientId): bool
+    {
+        return ProgramAssignment::where('program_id', $this->id)
+            ->where('client_id', $clientId)
+            ->delete();
+    }
+
+    public function isAssignedToClient(int $clientId): bool
+    {
+        return ProgramAssignment::where('program_id', $this->id)
+            ->where('client_id', $clientId)
+            ->exists();
+    }
+
+    public function isAssignedToMe(): bool
+    {
+        if (!auth()->check()) {
+            return false;
+        }
+
+        return $this->isAssignedToClient(auth()->id());
+    }
+
+    public function canBeViewedBy($user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        // Owner can always view
+        if ($this->user_id === $user->id) {
+            return true;
+        }
+
+        // Trainer who created it can view
+        if ($this->trainer_id === $user->id) {
+            return true;
+        }
+
+        // Assigned client can view
+        if ($this->isAssignedToClient($user->id)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function canBeEditedBy($user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        // Only owner or trainer can edit
+        return $this->user_id === $user->id || $this->trainer_id === $user->id;
+    }
+
+    public function canBeDeletedBy($user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        // Only owner or trainer can delete
+        return $this->user_id === $user->id || $this->trainer_id === $user->id;
+    }
+
+    public function getAssignedClients()
+    {
+        return $this->assignedClients()->get();
     }
 }

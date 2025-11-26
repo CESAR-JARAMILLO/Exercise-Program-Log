@@ -20,8 +20,8 @@ new class extends Component {
             $program = Program::findOrFail($programId);
         }
         
-        // Ensure user owns this program
-        abort_unless($program->user_id === Auth::id(), 403);
+        // Ensure user can view this program (owner, trainer, or assigned client)
+        abort_unless($program->canBeViewedBy(Auth::user()), 403);
         
         // Ensure program is a template
         abort_unless($program->isTemplate(), 403, 'This program is already active or completed.');
@@ -33,7 +33,7 @@ new class extends Component {
     public function with(): array
     {
         $program = Program::findOrFail($this->programId);
-        abort_unless($program->user_id === Auth::id(), 403);
+        abort_unless($program->canBeViewedBy(Auth::user()), 403);
         
         return [
             'program' => $program,
@@ -47,7 +47,7 @@ new class extends Component {
         ]);
 
         $program = Program::findOrFail($this->programId);
-        abort_unless($program->user_id === Auth::id(), 403);
+        abort_unless($program->canBeViewedBy(Auth::user()), 403);
         abort_unless($program->isTemplate(), 403, 'This program is already active or completed.');
 
         // Start the program

@@ -39,7 +39,7 @@ new class extends Component {
         }
         
         // Ensure user owns this program
-        abort_unless($program->user_id === Auth::id(), 403);
+        abort_unless($program->canBeEditedBy(Auth::user()), 403);
         
         // Store program ID
         $this->programId = $program->id;
@@ -96,7 +96,7 @@ new class extends Component {
         }])->findOrFail($this->programId);
         
         // Ensure user owns this program
-        abort_unless($program->user_id === Auth::id(), 403);
+        abort_unless($program->canBeEditedBy(Auth::user()), 403);
         
         return [
             'program' => $program,
@@ -193,7 +193,7 @@ new class extends Component {
         }
 
         $program = Program::findOrFail($this->programId);
-        abort_unless($program->user_id === Auth::id(), 403);
+        abort_unless($program->canBeEditedBy(Auth::user()), 403);
 
         DB::transaction(function () use ($validated, $program) {
             // Update program

@@ -119,7 +119,7 @@ new class extends Component {
             }
         }
 
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated, $user) {
             // Create program as template (no dates, status = template)
             $program = Program::create([
                 'name' => $validated['name'],
@@ -127,7 +127,8 @@ new class extends Component {
                 'length_weeks' => $validated['length_weeks'],
                 'notes' => $validated['notes'] ?? null,
                 'status' => 'template',
-                'user_id' => Auth::id(),
+                'user_id' => $user->id,
+                'trainer_id' => $user->isTrainer() ? $user->id : null,
             ]);
 
             // Create weeks, days, and exercises
