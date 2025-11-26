@@ -98,6 +98,32 @@ new class extends Component {
                 @endif
             </div>
 
+            <!-- Subscription Tier Display -->
+            <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 bg-neutral-50 dark:bg-neutral-800/50">
+                <p class="text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-2">
+                    {{ __('Subscription Tier') }}
+                </p>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold
+                        @if(auth()->user()->isFree()) bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-300
+                        @elseif(auth()->user()->isBasic()) bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+                        @elseif(auth()->user()->isTrainer()) bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                        @elseif(auth()->user()->isProTrainer()) bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300
+                        @endif">
+                        {{ config("subscription.tiers." . auth()->user()->subscription_tier . ".name", 'Free') }}
+                    </span>
+                    @if(auth()->user()->getMaxPrograms() !== null)
+                        <span class="text-sm text-zinc-600 dark:text-zinc-400">
+                            ({{ auth()->user()->getProgramCount() }}/{{ auth()->user()->getMaxPrograms() }} {{ __('programs') }})
+                        </span>
+                    @else
+                        <span class="text-sm text-zinc-600 dark:text-zinc-400">
+                            ({{ auth()->user()->getProgramCount() }} {{ __('programs') }})
+                        </span>
+                    @endif
+                </div>
+            </div>
+
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-end">
                     <flux:button variant="primary" type="submit" class="w-full" data-test="update-profile-button">

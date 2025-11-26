@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\SubscriptionTier;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -32,6 +33,7 @@ class UserFactory extends Factory
             'two_factor_secret' => Str::random(10),
             'two_factor_recovery_codes' => Str::random(10),
             'two_factor_confirmed_at' => now(),
+            'subscription_tier' => SubscriptionTier::FREE->value,
         ];
     }
 
@@ -54,6 +56,16 @@ class UserFactory extends Factory
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
+        ]);
+    }
+
+    /**
+     * Set the user's subscription tier for testing
+     */
+    public function withTier(SubscriptionTier $tier): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'subscription_tier' => $tier->value,
         ]);
     }
 }

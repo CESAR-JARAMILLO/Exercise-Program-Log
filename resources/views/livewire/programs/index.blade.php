@@ -33,9 +33,15 @@ new class extends Component {
             }
         }
 
+        $user = Auth::user();
+
         return [
             'programs' => $programs,
             'activeProgramsWithWorkouts' => $activeProgramsWithWorkouts,
+            'user' => $user,
+            'programCount' => $user->getProgramCount(),
+            'maxPrograms' => $user->getMaxPrograms(),
+            'canCreateProgram' => $user->canCreateProgram(),
         ];
     }
 
@@ -72,21 +78,52 @@ new class extends Component {
             </h1>
             <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 {{ __('Manage your training programs') }}
+                @if ($maxPrograms !== null)
+                    <span class="ml-2 font-medium">
+                        ({{ $programCount }}/{{ $maxPrograms }})
+                    </span>
+                @else
+                    <span class="ml-2 font-medium">
+                        ({{ $programCount }})
+                    </span>
+                @endif
             </p>
         </div>
-        <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate>
-            {{ __('Create Program') }}
-        </flux:button>
+        @if ($canCreateProgram)
+            <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate>
+                {{ __('Create Program') }}
+            </flux:button>
+        @else
+            <flux:button href="{{ route('programs.create') }}" variant="primary" disabled>
+                {{ __('Create Program') }}
+            </flux:button>
+        @endif
     </div>
+
+    @if (!$canCreateProgram)
+        <div
+            class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="font-medium">{{ __('Program Limit Reached') }}</p>
+                    <p class="mt-1">
+                        {{ __('You\'ve reached your limit of :max programs. Upgrade your subscription to create more programs.', ['max' => $maxPrograms]) }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
 
     @if ($programs->isEmpty())
         <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-12 text-center">
             <p class="text-zinc-600 dark:text-zinc-400">
                 {{ __('No programs yet. Create your first program to get started!') }}
             </p>
-            <flux:button href="{{ route('programs.create') }}" variant="primary" class="mt-4" wire:navigate>
-                {{ __('Create Program') }}
-            </flux:button>
+            @if ($canCreateProgram)
+                <flux:button href="{{ route('programs.create') }}" variant="primary" class="mt-4" wire:navigate>
+                    {{ __('Create Program') }}
+                </flux:button>
+            @endif
         </div>
     @else
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

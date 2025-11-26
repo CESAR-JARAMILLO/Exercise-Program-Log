@@ -83,6 +83,15 @@ new class extends Component {
 
     public function save(): void
     {
+        $user = Auth::user();
+
+        // Check if user can create another program
+        if (!$user->canCreateProgram()) {
+            $max = $user->getMaxPrograms();
+            $this->addError('limit', __("You've reached your program limit of :max programs. Upgrade your subscription to create more programs.", ['max' => $max]));
+            return;
+        }
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],

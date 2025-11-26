@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\SubscriptionTier;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -25,6 +26,7 @@ class User extends Authenticatable
         'email',
         'password',
         'timezone',
+        'subscription_tier',
     ];
 
     /**
@@ -152,5 +154,133 @@ class User extends Authenticatable
         }
 
         return round($totalRate / $activePrograms->count(), 1);
+    }
+
+    /**
+     * Get the user's subscription tier
+     */
+    public function getSubscriptionTier(): string
+    {
+        return $this->subscription_tier ?? SubscriptionTier::FREE->value;
+    }
+
+    /**
+     * Check if user is on free tier
+     */
+    public function isFree(): bool
+    {
+        return $this->subscription_tier === SubscriptionTier::FREE->value;
+    }
+
+    /**
+     * Check if user is on basic tier
+     */
+    public function isBasic(): bool
+    {
+        return $this->subscription_tier === SubscriptionTier::BASIC->value;
+    }
+
+    /**
+     * Check if user is a trainer (trainer or pro_trainer)
+     */
+    public function isTrainer(): bool
+    {
+        return in_array($this->subscription_tier, [
+            SubscriptionTier::TRAINER->value,
+            SubscriptionTier::PRO_TRAINER->value,
+        ]);
+    }
+
+    /**
+     * Check if user is a pro trainer
+     */
+    public function isProTrainer(): bool
+    {
+        return $this->subscription_tier === SubscriptionTier::PRO_TRAINER->value;
+    }
+
+    /**
+     * Check if user can share programs with clients
+     */
+    public function canSharePrograms(): bool
+    {
+        return $this->isTrainer();
+    }
+
+    /**
+     * Check if user can view client analytics
+     */
+    public function canViewClientAnalytics(): bool
+    {
+        return $this->isTrainer();
+    }
+
+    /**
+     * Check if user has a specific feature
+     */
+    public function hasFeature(string $feature): bool
+    {
+        $tierConfig = config("subscription.tiers.{$this->subscription_tier}");
+        
+        if (!$tierConfig) {
+            return false;
+        }
+
+        return in_array($feature, $tierConfig['features'] ?? []);
+    }
+
+    /**
+     * Upgrade user to a different tier (useful for testing/admin)
+     */
+    public function upgradeTo(string $tier): void
+    {
+        $validTiers = SubscriptionTier::values();
+        
+        if (!in_array($tier, $validTiers)) {
+            throw new \InvalidArgumentException("Invalid tier: {$tier}. Valid tiers: " . implode(', ', $validTiers));
+        }
+
+        $this->update(['subscription_tier' => $tier]);
+    }
+
+    /**
+     * Get maximum number of programs allowed for current tier
+     */
+    public function getMaxPrograms(): ?int
+    {
+        $tierConfig = config("subscription.tiers.{$this->subscription_tier}");
+        
+        return $tierConfig['max_programs'] ?? null;
+    }
+
+    /**
+     * Get current number of programs user has
+     */
+    public function getProgramCount(): int
+    {
+        return $this->programs()->count();
+    }
+
+    /**
+     * Check if user can create another program
+     */
+    public function canCreateProgram(): bool
+    {
+        $max = $this->getMaxPrograms();
+        
+        // null means unlimited
+        if ($max === null) {
+            return true;
+        }
+
+        return $this->getProgramCount() < $max;
+    }
+
+    /**
+     * Check if user has reached their program limit
+     */
+    public function hasReachedProgramLimit(): bool
+    {
+        return !$this->canCreateProgram();
     }
 }
