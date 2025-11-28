@@ -20,20 +20,28 @@ class CreateNewUser implements CreatesNewUsers
     public function create(array $input): User
     {
         Validator::make($input, [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255', 'min:2'],
             'email' => [
                 'required',
                 'string',
-                'email',
+                'email:rfc,dns',
                 'max:255',
                 Rule::unique(User::class),
             ],
             'password' => $this->passwordRules(),
+        ], [
+            'name.required' => 'Please enter your full name.',
+            'name.min' => 'Your name must be at least 2 characters.',
+            'email.required' => 'Please enter your email address.',
+            'email.email' => 'Please enter a valid email address.',
+            'email.unique' => 'This email is already registered. Please log in instead.',
+            'password.required' => 'Please enter a password.',
+            'password.confirmed' => 'The passwords do not match.',
         ])->validate();
 
         return User::create([
-            'name' => $input['name'],
-            'email' => $input['email'],
+            'name' => trim($input['name']),
+            'email' => strtolower(trim($input['email'])),
             'password' => $input['password'],
             'subscription_tier' => SubscriptionTier::FREE->value,
         ]);
