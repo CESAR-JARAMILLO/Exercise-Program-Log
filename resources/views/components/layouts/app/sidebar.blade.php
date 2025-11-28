@@ -14,6 +14,16 @@
             <flux:navlist variant="outline">
                 <flux:navlist.group :heading="__('Platform')" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
+                    <flux:navlist.item icon="bell" :href="route('notifications.index')" :current="request()->routeIs('notifications.*')" wire:navigate>
+                        <span class="flex w-full items-center justify-between">
+                            <span>{{ __('Notifications') }}</span>
+                            @if(auth()->user()->unreadNotifications()->count() > 0)
+                                <span class="ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                                    {{ auth()->user()->unreadNotifications()->count() > 9 ? '9+' : auth()->user()->unreadNotifications()->count() }}
+                                </span>
+                            @endif
+                        </span>
+                    </flux:navlist.item>
                     <flux:navlist.item icon="clipboard-document-list" :href="route('programs.index')" :current="request()->routeIs('programs.*')" wire:navigate>{{ __('Programs') }}</flux:navlist.item>
                     <flux:navlist.item icon="chart-bar" :href="route('statistics.index')" :current="request()->routeIs('statistics.*')" wire:navigate>{{ __('Statistics') }}</flux:navlist.item>
                 </flux:navlist.group>

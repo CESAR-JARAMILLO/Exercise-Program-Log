@@ -4,8 +4,6 @@ namespace App\Notifications;
 
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class TrainerRequestSent extends Notification
@@ -28,21 +26,7 @@ class TrainerRequestSent extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
-    }
-
-    /**
-     * Get the mail representation of the notification.
-     */
-    public function toMail(object $notifiable): MailMessage
-    {
-        return (new MailMessage)
-            ->subject(__('Trainer Connection Request'))
-            ->greeting(__('Hello :name,', ['name' => $notifiable->name]))
-            ->line(__(':trainer has sent you a trainer connection request.', ['trainer' => $this->trainer->name]))
-            ->line(__('You can accept or decline this request in your account.'))
-            ->action(__('View Requests'), route('clients.requests'))
-            ->line(__('Thank you for using our application!'));
+        return ['database'];
     }
 
     /**
@@ -55,6 +39,10 @@ class TrainerRequestSent extends Notification
         return [
             'trainer_id' => $this->trainer->id,
             'trainer_name' => $this->trainer->name,
+            'trainer_email' => $this->trainer->email,
+            'message' => $this->trainer->name . ' has sent you a trainer connection request.',
+            'action_url' => route('clients.requests'),
+            'action_text' => 'View Requests',
         ];
     }
 }

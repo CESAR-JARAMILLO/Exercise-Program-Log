@@ -21,6 +21,8 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/appearance', 'settings.appearance')->name('appearance.edit');
     Volt::route('settings/timezone', 'settings.timezone')->name('timezone.edit');
 
+    Volt::route('notifications', 'notifications.index')->name('notifications.index');
+
     Volt::route('settings/two-factor', 'settings.two-factor')
         ->middleware(
             when(
