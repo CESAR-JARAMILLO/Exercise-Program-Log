@@ -7,18 +7,25 @@ use Livewire\Volt\Component;
 new class extends Component {
     // Track which weeks are expanded
     public array $expandedWeeks = [];
+    public int $programId;
+
+    public function mount($program = null): void
+    {
+        // Get program ID from route parameter
+        $programId = $program ?? request()->route('program');
+        
+        // Handle both ID and model instance
+        if ($programId instanceof Program) {
+            $this->programId = $programId->id;
+        } else {
+            $this->programId = (int) $programId;
+        }
+    }
 
     public function with(): array
     {
-        // Get program ID from route parameter
-        $programId = request()->route('program');
-
-        // Handle both ID and model instance
-        if ($programId instanceof Program) {
-            $program = $programId;
-        } else {
-            $program = Program::findOrFail($programId);
-        }
+        // Get program from stored ID
+        $program = Program::findOrFail($this->programId);
 
         // Ensure user can view this program (owner, trainer, or assigned client)
         abort_unless($program->canBeViewedBy(Auth::user()), 403);

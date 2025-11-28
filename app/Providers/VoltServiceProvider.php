@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Program;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Volt\Volt;
 

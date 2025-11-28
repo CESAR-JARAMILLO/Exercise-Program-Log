@@ -8,18 +8,25 @@ use Livewire\Volt\Component;
 
 new class extends Component {
     public array $selectedClients = [];
+    public int $programId;
+
+    public function mount($program = null): void
+    {
+        // Get program ID from route parameter
+        $programId = $program ?? request()->route('program');
+        
+        // Handle both ID and model instance
+        if ($programId instanceof Program) {
+            $this->programId = $programId->id;
+        } else {
+            $this->programId = (int) $programId;
+        }
+    }
 
     public function with(): array
     {
-        // Get program ID from route parameter
-        $programId = request()->route('program');
-
-        // Handle both ID and model instance
-        if ($programId instanceof Program) {
-            $program = $programId;
-        } else {
-            $program = Program::findOrFail($programId);
-        }
+        // Get program from stored ID
+        $program = Program::findOrFail($this->programId);
 
         $trainer = Auth::user();
 
@@ -52,12 +59,8 @@ new class extends Component {
             'selectedClients.*' => ['exists:users,id'],
         ]);
 
-        $programId = request()->route('program');
-        if ($programId instanceof Program) {
-            $program = $programId;
-        } else {
-            $program = Program::findOrFail($programId);
-        }
+        // Get program from stored ID
+        $program = Program::findOrFail($this->programId);
 
         $trainer = Auth::user();
 
@@ -93,7 +96,9 @@ new class extends Component {
 
         if ($assignedCount > 0) {
             session()->flash('success', __('Program assigned to :count client(s) successfully.', ['count' => $assignedCount]));
-            $this->redirect(route('programs.show', $program));
+            // Refresh program to ensure it's up to date
+            $program->refresh();
+            $this->redirect(route('programs.show', $program->id), navigate: true);
         } else {
             session()->flash('error', __('No new clients were assigned.'));
         }
