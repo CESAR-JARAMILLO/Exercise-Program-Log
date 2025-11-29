@@ -169,14 +169,14 @@
                     <div class="group p-8 rounded-2xl border-2 border-blue-100 dark:border-blue-900 bg-gradient-to-br from-blue-50 to-white dark:from-slate-800 dark:to-slate-900 hover:border-orange-300 dark:hover:border-orange-700 transition-all hover:shadow-xl">
                         <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center mb-6 group-hover:from-orange-500 group-hover:to-orange-600 transition-all">
                             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                             </svg>
                         </div>
                         <h3 class="text-2xl font-bold text-slate-900 dark:text-white mb-3">
-                            Export & Share
+                            Analytics & Insights
                         </h3>
                         <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
-                            Export your programs as PDFs and share them with others. Perfect for printing or digital distribution.
+                            Track your progress with detailed statistics, workout frequency, and completion rates to stay motivated and achieve your goals.
                         </p>
                     </div>
                 </div>

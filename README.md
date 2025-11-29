@@ -1,6 +1,6 @@
 # Program Log
 
-A Laravel-based training program management application that allows users to create, manage, and track their workout programs with a hierarchical structure of weeks, days, and exercises.
+A Laravel-based fitness program management platform that enables users to create, manage, and track workout programs. The app supports both individual users and trainer-client relationships with subscription-based feature tiers.
 
 ## Overview
 
@@ -8,22 +8,66 @@ Program Log is a web application built with Laravel and Livewire Volt that enabl
 - Create comprehensive training programs with multiple weeks
 - Organize workouts by days within each week
 - Add detailed exercises with various metrics (sets, reps, weight, distance, time)
-- View, edit, and delete their programs
-- Track program start and end dates
+- Track active programs and log workouts
+- View statistics and analytics
+- Connect trainers with clients for program sharing and progress tracking
 
 ## Features
 
-### Current Features
-- ✅ **User Authentication** - Secure user registration and login
-- ✅ **Program Management** - Full CRUD operations for training programs
-- ✅ **Hierarchical Structure** - Programs → Weeks → Days → Exercises
-- ✅ **Exercise Details** - Track sets, reps, weight, distance, and time
-- ✅ **Date Management** - Set start and end dates for programs
-- ✅ **Collapsible UI** - Expandable/collapsible weeks for better navigation
-- ✅ **Flash Messages** - User-friendly success and error notifications
-- ✅ **Authorization** - Users can only access and modify their own programs
+### User Authentication & Settings
+- ✅ Secure registration with strong password requirements
+- ✅ Login/logout with enhanced error handling
+- ✅ Password reset flow
+- ✅ Two-factor authentication (2FA)
+- ✅ User profile management
+- ✅ Timezone settings
+- ✅ Appearance settings (light/dark mode)
 
-### Program Structure
+### Program Management
+- ✅ **Create Programs**: Multi-week programs with customizable structure
+- ✅ **Program Structure**: Programs → Weeks (1-52) → Days (1-7) → Exercises
+- ✅ **Exercise Details**: Track sets, reps, weight, distance, time, exercise type
+- ✅ **View/Edit/Delete**: Full CRUD operations with authorization
+- ✅ **Program Limits**: Tier-based program creation limits
+- ✅ **Collapsible UI**: Expandable/collapsible weeks for better navigation
+
+### Active Programs & Workout Logging
+- ✅ Start programs to track active workouts
+- ✅ Calendar view for scheduled workouts
+- ✅ Log workouts with exercise details
+- ✅ Workout history tracking
+- ✅ Stop/restart active programs
+- ✅ Completion rate tracking
+
+### Statistics & Analytics
+- ✅ Personal workout statistics
+- ✅ Workout frequency tracking (weekly/monthly)
+- ✅ Completion rates
+- ✅ Active programs overview
+- ✅ Exercise performance metrics
+
+### Trainer-Client Features
+- ✅ **Trainer Requests**: Trainers can send connection requests to clients
+- ✅ **Client Management**: Trainers can view and manage their clients
+- ✅ **Program Assignment**: Trainers can assign programs to clients
+- ✅ **Client Analytics**: Trainers can view detailed analytics for each client
+- ✅ **In-App Notifications**: Real-time notifications for requests and assignments
+
+### Subscription Tiers
+- **Free**: 1 program, basic features
+- **Basic**: 5 programs, enhanced analytics
+- **Trainer**: 20 programs, client management, program sharing
+- **Pro Trainer**: 50 programs, unlimited clients, advanced analytics
+
+### Notifications System
+- ✅ In-app notification center
+- ✅ Notifications for trainer requests (sent/accepted)
+- ✅ Notifications for program assignments
+- ✅ Mark as read/unread functionality
+- ✅ Notification badges in sidebar
+
+## Program Structure
+
 - **Program**: Top-level container with name, description, dates, and notes
 - **Weeks**: Multiple weeks per program (1-52 weeks)
 - **Days**: 7 days per week (Day 1-7)
@@ -31,167 +75,101 @@ Program Log is a web application built with Laravel and Livewire Volt that enabl
 
 ## Database Structure
 
-### Tables
+### Key Tables
 
 #### `programs`
-Stores the main program information:
-- `id` - Primary key
-- `user_id` - Foreign key to users table
-- `name` - Program name
-- `description` - Program description
-- `length_weeks` - Number of weeks in the program
-- `start_date` - Program start date (cast to Carbon date)
-- `end_date` - Program end date (cast to Carbon date)
-- `notes` - Additional notes
-- `created_at`, `updated_at` - Timestamps
+- `id`, `user_id`, `name`, `description`, `length_weeks`, `start_date`, `end_date`, `notes`, `created_at`, `updated_at`
 
 #### `program_weeks`
-Stores weeks within a program:
-- `id` - Primary key
-- `program_id` - Foreign key to programs table
-- `week_number` - Week number (1, 2, 3, etc.)
-- `created_at`, `updated_at` - Timestamps
+- `id`, `program_id`, `week_number`, `created_at`, `updated_at`
 
 #### `program_days`
-Stores days within a week:
-- `id` - Primary key
-- `program_week_id` - Foreign key to program_weeks table
-- `day_number` - Day number (1-7)
-- `label` - Custom day label (e.g., "Push Day", "Pull Day")
-- `created_at`, `updated_at` - Timestamps
+- `id`, `program_week_id`, `day_number`, `label`, `created_at`, `updated_at`
 
 #### `day_exercises`
-Stores exercises for each day:
-- `id` - Primary key
-- `program_day_id` - Foreign key to program_days table
-- `name` - Exercise name
-- `type` - Exercise type (strength, cardio, flexibility, other)
-- `sets` - Number of sets
-- `reps` - Number of repetitions
-- `weight` - Weight in pounds
-- `distance` - Distance in miles
-- `time_seconds` - Time in seconds
-- `order` - Display order
-- `created_at`, `updated_at` - Timestamps
+- `id`, `program_day_id`, `name`, `type`, `sets`, `reps`, `weight`, `distance`, `time_seconds`, `order`, `created_at`, `updated_at`
+
+#### `active_programs`
+- Tracks when users start programs and their status
+
+#### `workout_logs` / `workout_exercises`
+- Records completed workouts and exercise performance
+
+#### `trainer_client_relationships`
+- Manages trainer-client connections with status tracking
+
+#### `program_assignments`
+- Links trainers to clients for specific programs
 
 ### Relationships
 
 ```
 User
-  └── hasMany → Program
-        └── hasMany → ProgramWeek
-              └── hasMany → ProgramDay
-                    └── hasMany → DayExercise
+  ├── hasMany → Program
+  │     └── hasMany → ProgramWeek
+  │           └── hasMany → ProgramDay
+  │                 └── hasMany → DayExercise
+  ├── hasMany → ActiveProgram
+  ├── hasMany → WorkoutLog
+  ├── trainerRelationships → TrainerClientRelationship
+  └── clientRelationships → TrainerClientRelationship
 ```
 
-## Key Files and Their Purposes
+## Key Files
 
 ### Models
+- `app/Models/User.php` - User model with subscription tier and trainer-client relationships
+- `app/Models/Program.php` - Program model with authorization methods
+- `app/Models/ActiveProgram.php` - Tracks active program instances
+- `app/Models/WorkoutLog.php` - Workout logging
+- `app/Models/TrainerClientRelationship.php` - Trainer-client connections
+- `app/Models/ProgramAssignment.php` - Program assignments
 
-#### `app/Models/Program.php`
-- Main program model
-- Defines relationships with User and ProgramWeek
-- Includes date casting for `start_date` and `end_date`
-- Fillable fields for mass assignment protection
+### Services
+- `app/Services/TrainerAnalyticsService.php` - Aggregates client analytics, completion rates, workout stats
 
-#### `app/Models/ProgramWeek.php`
-- Represents a week within a program
-- Belongs to Program, has many ProgramDays
-- Tracks week number
+### Notifications
+- `app/Notifications/TrainerRequestSent.php` - Notification when trainer sends request
+- `app/Notifications/TrainerRequestAccepted.php` - Notification when client accepts
+- `app/Notifications/ProgramAssigned.php` - Notification when program is assigned
 
-#### `app/Models/ProgramDay.php`
-- Represents a day within a week
-- Belongs to ProgramWeek, has many DayExercises
-- Stores day number and optional label
+### Livewire Components
+All major features use Livewire Volt for reactive UI:
+- `resources/views/livewire/programs/` - Program management
+- `resources/views/livewire/workouts/` - Workout logging
+- `resources/views/livewire/trainers/` - Trainer features
+- `resources/views/livewire/statistics/` - Statistics and analytics
+- `resources/views/livewire/notifications/` - Notification center
 
-#### `app/Models/DayExercise.php`
-- Represents an exercise within a day
-- Belongs to ProgramDay
-- Stores all exercise metrics (sets, reps, weight, distance, time)
-- Includes order field for sorting
+## Routes
 
-### Migrations
+### Public
+- `GET /` - Landing page with pricing
 
-#### `database/migrations/2025_11_21_174421_create_programs_table.php`
-- Creates the main programs table
-- Sets up foreign key relationship with users
+### Authenticated
+- `GET /dashboard` - User dashboard
+- `GET /programs` - List all programs
+- `GET /programs/create` - Create new program
+- `GET /programs/{program}` - View program details
+- `GET /programs/{program}/edit` - Edit program
+- `GET /programs/{program}/start` - Start a program
+- `GET /programs/{program}/assign` - Assign program to clients (trainer only)
+- `GET /workouts` - Workout calendar
+- `GET /workouts/log/{activeProgram}/{date}` - Log workout
+- `GET /workouts/history` - Workout history
+- `GET /statistics` - Personal statistics
+- `GET /notifications` - Notification center
+- `GET /trainers/clients` - Trainer client management
+- `GET /trainers/analytics` - Trainer analytics dashboard
+- `GET /clients/requests` - Client request management
+- `GET /subscriptions/plans` - Subscription plans
 
-#### `database/migrations/2025_11_22_180201_add_length_weeks_to_programs_table.php`
-- Adds `length_weeks` column to programs table
-
-#### `database/migrations/2025_11_22_180511_create_program_weeks_table.php`
-- Creates program_weeks table
-- Links weeks to programs
-
-#### `database/migrations/2025_11_22_181001_create_program_days_table.php`
-- Creates program_days table
-- Links days to weeks
-
-#### `database/migrations/2025_11_22_182412_create_day_exercises_table.php`
-- Creates day_exercises table
-- Links exercises to days
-- Stores all exercise metrics
-
-#### `database/migrations/2025_11_22_183249_drop_exercises_table.php`
-- Drops the old standalone exercises table (replaced by day_exercises)
-
-### Views (Livewire Volt Components)
-
-#### `resources/views/livewire/programs/index.blade.php`
-- **Purpose**: Lists all programs for the authenticated user
-- **Features**:
-  - Displays program cards with key information
-  - Shows program name, description, length, and dates
-  - Provides View, Edit, and Delete actions
-  - Flash message display for success/error notifications
-- **Route**: `GET /programs`
-
-#### `resources/views/livewire/programs/create.blade.php`
-- **Purpose**: Form to create a new program with all weeks, days, and exercises
-- **Features**:
-  - Single-page form for complete program creation
-  - Dynamic week generation based on length
-  - Collapsible weeks for better UX
-  - Add/remove exercises per day
-  - Validation for all fields
-  - Flash messages for success/error
-- **Route**: `GET /programs/create`, `POST` via Livewire
-
-#### `resources/views/livewire/programs/show.blade.php`
-- **Purpose**: Display detailed view of a single program
-- **Features**:
-  - Shows all program information
-  - Displays weeks, days, and exercises in hierarchical structure
-  - Collapsible weeks
-  - Edit and Delete actions
-  - Authorization check (users can only view their own programs)
-- **Route**: `GET /programs/{program}`
-
-#### `resources/views/livewire/programs/edit.blade.php`
-- **Purpose**: Form to edit an existing program
-- **Features**:
-  - Pre-populates all existing data
-  - Allows modification of weeks, days, and exercises
-  - Smart update logic (updates existing, creates new, deletes removed)
-  - Can add/remove weeks dynamically
-  - Validation and flash messages
-- **Route**: `GET /programs/{program}/edit`, `PUT` via Livewire
-
-### Routes
-
-#### `routes/web.php`
-Defines all application routes:
-- **Public Routes**:
-  - `GET /` - Welcome page
-- **Authenticated Routes**:
-  - `GET /dashboard` - Dashboard
-  - `GET /programs` - List programs
-  - `GET /programs/create` - Create program form
-  - `GET /programs/{program}` - View program
-  - `GET /programs/{program}/edit` - Edit program form
-  - Settings routes (profile, password, appearance, two-factor)
-
-All program routes use Livewire Volt components and require authentication.
+### Settings
+- `GET /settings/profile` - Edit profile
+- `GET /settings/password` - Change password
+- `GET /settings/appearance` - Appearance settings
+- `GET /settings/timezone` - Timezone settings
+- `GET /settings/two-factor` - 2FA management
 
 ## Setup Instructions
 
@@ -199,7 +177,7 @@ All program routes use Livewire Volt components and require authentication.
 - PHP 8.2 or higher
 - Composer
 - Node.js and NPM
-- MySQL/PostgreSQL database
+- MySQL/PostgreSQL database (or SQLite for development)
 
 ### Installation
 
@@ -276,53 +254,57 @@ All program routes use Livewire Volt components and require authentication.
    - Sets, reps, weight, distance, time (optional)
 7. Click "Create Complete Program" to save
 
-### Viewing a Program
+### Starting and Logging Workouts
 
-1. From the programs list, click "View" on any program
-2. All weeks are expanded by default
-3. Click on week headers to collapse/expand
-4. View all exercises with their details
+1. From the program view, click "Start Program"
+2. View your scheduled workouts in the Calendar (`/workouts`)
+3. Click on a workout day to log your exercises
+4. Track sets, reps, weight, and other metrics
+5. View your workout history and statistics
 
-### Editing a Program
+### Trainer Features
 
-1. From the programs list or view page, click "Edit"
-2. Modify any program details
-3. Add or remove exercises
-4. Change the number of weeks (adds/removes weeks as needed)
-5. Click "Update Program" to save changes
-
-### Deleting a Program
-
-1. From the programs list or view page, click "Delete"
-2. Confirm the deletion
-3. Program and all associated data will be permanently deleted
+1. Upgrade to Trainer or Pro Trainer tier
+2. Send connection requests to clients (`/trainers/clients`)
+3. Assign programs to connected clients
+4. View client analytics and progress (`/trainers/analytics`)
 
 ## Technology Stack
 
 - **Backend**: Laravel 11
 - **Frontend**: Livewire Volt, Alpine.js
 - **UI Components**: Flux UI
-- **Database**: MySQL/PostgreSQL
+- **Database**: MySQL/PostgreSQL (SQLite for development)
 - **Authentication**: Laravel Fortify
+- **Testing**: Pest PHP
 
 ## Security Features
 
 - User authentication required for all program operations
-- Authorization checks ensure users can only access their own programs
+- Authorization checks ensure users can only access their own programs or assigned programs
 - CSRF protection on all forms
 - Input validation on all user inputs
 - SQL injection protection via Eloquent ORM
+- Strong password requirements
+- Two-factor authentication support
 
-## Future Enhancements
+## Testing
 
-Potential features for future development:
-- Program duplication/cloning
-- Search and filter functionality
-- Custom day labels editing
-- Progress tracking (mark exercises as completed)
-- Export/import programs
-- Program templates
-- Workout history tracking
+Run tests with:
+```bash
+php artisan test
+```
+
+Current test coverage includes:
+- Authentication flows (registration, login, password reset)
+- Service tests for TrainerAnalyticsService
+- Password validation tests
+
+## Configuration
+
+- Subscription tiers defined in `config/subscription.php`
+- Fortify configuration for auth features in `config/fortify.php`
+- Environment-based settings in `.env`
 
 ## License
 
@@ -335,4 +317,3 @@ Potential features for future development:
 ## Support
 
 [Add support information if applicable]
-
