@@ -81,6 +81,61 @@ new class extends Component {
         }
     }
 
+    public function copyDay($week, $sourceDay, $targetDay): void
+    {
+        $week = (int) $week;
+        $sourceDay = (int) $sourceDay;
+        $targetDay = (int) $targetDay;
+
+        if (!isset($this->exercises[$week][$sourceDay])) {
+            return;
+        }
+
+        // Deep copy the exercises array
+        $this->exercises[$week][$targetDay] = [];
+        foreach ($this->exercises[$week][$sourceDay] as $exercise) {
+            $this->exercises[$week][$targetDay][] = [
+                'name' => $exercise['name'] ?? '',
+                'type' => $exercise['type'] ?? 'strength',
+                'sets' => $exercise['sets'] ?? null,
+                'reps' => $exercise['reps'] ?? null,
+                'weight' => $exercise['weight'] ?? null,
+                'distance' => $exercise['distance'] ?? null,
+                'time_seconds' => $exercise['time_seconds'] ?? null,
+            ];
+        }
+
+        // Also copy the rest day status
+        if (isset($this->restDays[$week][$sourceDay])) {
+            $this->restDays[$week][$targetDay] = $this->restDays[$week][$sourceDay];
+        }
+
+        session()->flash(
+            'copied',
+            __('Day :source copied to Day :target successfully!', [
+                'source' => $sourceDay,
+                'target' => $targetDay,
+            ]),
+        );
+    }
+
+    public function getAvailableDaysToCopy($week, $currentDay): array
+    {
+        $available = [];
+        for ($day = 1; $day <= 7; $day++) {
+            if ($day != $currentDay && !empty($this->exercises[$week][$day])) {
+                $exerciseCount = collect($this->exercises[$week][$day])
+                    ->filter(fn($ex) => !empty($ex['name']))
+                    ->count();
+
+                if ($exerciseCount > 0) {
+                    $available[$day] = $exerciseCount;
+                }
+            }
+        }
+        return $available;
+    }
+
     public function save(): void
     {
         $user = Auth::user();
@@ -242,6 +297,13 @@ new class extends Component {
 
         <!-- Weeks, Days, and Exercises -->
         @if ($length_weeks > 0)
+            @if (session('copied'))
+                <div
+                    class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
+                    {{ session('copied') }}
+                </div>
+            @endif
+
             <div class="space-y-4">
                 @foreach ($exercises as $weekNum => $days)
                     <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
@@ -289,11 +351,44 @@ new class extends Component {
                                                         </label>
                                                     @endif
                                                 </div>
-                                                <flux:button type="button"
-                                                    wire:click="addExercise({{ $weekNum }}, {{ $dayNum }})"
-                                                    variant="ghost" size="sm">
-                                                    {{ __('+ Add Exercise') }}
-                                                </flux:button>
+                                                <div class="flex items-center gap-2">
+                                                    <flux:button type="button"
+                                                        wire:click="addExercise({{ $weekNum }}, {{ $dayNum }})"
+                                                        variant="ghost" size="sm">
+                                                        {{ __('+ Add Exercise') }}
+                                                    </flux:button>
+
+                                                    @php
+                                                        $availableDays = $this->getAvailableDaysToCopy(
+                                                            $weekNum,
+                                                            $dayNum,
+                                                        );
+                                                    @endphp
+
+                                                    @if (!empty($availableDays))
+                                                        <flux:dropdown position="bottom" align="end">
+                                                            <flux:button type="button" variant="ghost" size="sm">
+                                                                {{ __('Copy Day') }}
+                                                            </flux:button>
+
+                                                            <flux:menu>
+                                                                <flux:menu.heading>{{ __('Copy from:') }}
+                                                                </flux:menu.heading>
+                                                                @foreach ($availableDays as $sourceDay => $exerciseCount)
+                                                                    <flux:menu.item
+                                                                        wire:click="copyDay({{ $weekNum }}, {{ $sourceDay }}, {{ $dayNum }})"
+                                                                        type="button">
+                                                                        {{ __('Day :number (:count :exercise)', [
+                                                                            'number' => $sourceDay,
+                                                                            'count' => $exerciseCount,
+                                                                            'exercise' => $exerciseCount === 1 ? 'exercise' : 'exercises',
+                                                                        ]) }}
+                                                                    </flux:menu.item>
+                                                                @endforeach
+                                                            </flux:menu>
+                                                        </flux:dropdown>
+                                                    @endif
+                                                </div>
                                             </div>
 
                                             <div class="space-y-3">
