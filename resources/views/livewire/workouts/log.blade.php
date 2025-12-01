@@ -40,6 +40,7 @@ new class extends Component {
             
             // Load existing exercise data
             foreach ($workoutLog->exercises as $workoutExercise) {
+                $timeSeconds = $workoutExercise->time_seconds_actual;
                 $this->exercises[$workoutExercise->day_exercise_id] = [
                     'name' => $workoutExercise->name,
                     'type' => $workoutExercise->type,
@@ -47,7 +48,10 @@ new class extends Component {
                     'reps_actual' => $workoutExercise->reps_actual,
                     'weight_actual' => $workoutExercise->weight_actual,
                     'distance_actual' => $workoutExercise->distance_actual,
-                    'time_seconds_actual' => $workoutExercise->time_seconds_actual,
+                    'time_seconds_actual' => $timeSeconds,
+                    'time_hours' => $timeSeconds ? floor($timeSeconds / 3600) : null,
+                    'time_minutes' => $timeSeconds ? floor(($timeSeconds % 3600) / 60) : null,
+                    'time_seconds' => $timeSeconds ? ($timeSeconds % 60) : null,
                     'notes' => $workoutExercise->notes,
                 ];
             }
@@ -86,8 +90,19 @@ new class extends Component {
                     'weight_actual' => null,
                     'distance_actual' => null,
                     'time_seconds_actual' => null,
+                    'time_hours' => null,
+                    'time_minutes' => null,
+                    'time_seconds' => null,
                     'notes' => null,
                 ];
+            } else {
+                // Ensure time fields are initialized even if time_seconds_actual exists
+                if (!isset($this->exercises[$targetExercise->id]['time_hours'])) {
+                    $timeSeconds = $this->exercises[$targetExercise->id]['time_seconds_actual'] ?? null;
+                    $this->exercises[$targetExercise->id]['time_hours'] = $timeSeconds ? floor($timeSeconds / 3600) : null;
+                    $this->exercises[$targetExercise->id]['time_minutes'] = $timeSeconds ? floor(($timeSeconds % 3600) / 60) : null;
+                    $this->exercises[$targetExercise->id]['time_seconds'] = $timeSeconds ? ($timeSeconds % 60) : null;
+                }
             }
         }
         
@@ -142,6 +157,20 @@ new class extends Component {
             $order = 1;
             foreach ($this->exercises as $dayExerciseId => $exerciseData) {
                 if (!empty($exerciseData['name'])) {
+                    // Convert time from hours/minutes/seconds to total seconds
+                    $timeSeconds = null;
+                    if (isset($exerciseData['time_hours']) || isset($exerciseData['time_minutes']) || isset($exerciseData['time_seconds'])) {
+                        $hours = (int)($exerciseData['time_hours'] ?? 0);
+                        $minutes = (int)($exerciseData['time_minutes'] ?? 0);
+                        $seconds = (int)($exerciseData['time_seconds'] ?? 0);
+                        if ($hours > 0 || $minutes > 0 || $seconds > 0) {
+                            $timeSeconds = ($hours * 3600) + ($minutes * 60) + $seconds;
+                        }
+                    } else {
+                        // Fallback to time_seconds_actual if time breakdown not provided
+                        $timeSeconds = $exerciseData['time_seconds_actual'] ?? null;
+                    }
+                    
                     WorkoutExercise::create([
                         'workout_log_id' => $workoutLog->id,
                         'day_exercise_id' => $dayExerciseId,
@@ -151,7 +180,7 @@ new class extends Component {
                         'reps_actual' => $exerciseData['reps_actual'] ?? null,
                         'weight_actual' => $exerciseData['weight_actual'] ?? null,
                         'distance_actual' => $exerciseData['distance_actual'] ?? null,
-                        'time_seconds_actual' => $exerciseData['time_seconds_actual'] ?? null,
+                        'time_seconds_actual' => $timeSeconds,
                         'notes' => $exerciseData['notes'] ?? null,
                         'order' => $order++,
                     ]);
@@ -230,62 +259,172 @@ new class extends Component {
                     </div>
                     <div>
                         <h4 class="text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-2">{{ __('Actual') }}</h4>
-                        <div class="space-y-2">
-                            <input type="text" 
+                        <div class="space-y-3">
+                            <flux:input 
                                 wire:model="exercises.{{ $targetExercise->id }}.name"
+                                :label="__('Exercise Name')"
                                 placeholder="Exercise name"
-                                class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
                             />
-                            <div class="grid grid-cols-2 gap-2">
-                                @if($targetExercise->sets)
-                                    <input type="number" 
+                            
+                            @php
+                                $isStrength = $targetExercise->type === 'strength';
+                                $isCardio = $targetExercise->type === 'cardio';
+                                $isFlexibility = $targetExercise->type === 'flexibility';
+                            @endphp
+                            
+                            @if($isStrength)
+                                <flux:input 
+                                    type="number"
+                                    wire:model="exercises.{{ $targetExercise->id }}.sets_actual"
+                                    :label="__('Sets')"
+                                    placeholder="Sets"
+                                    min="0"
+                                />
+                                
+                                <flux:input 
+                                    type="number"
+                                    wire:model="exercises.{{ $targetExercise->id }}.reps_actual"
+                                    :label="__('Reps')"
+                                    placeholder="Reps"
+                                    min="0"
+                                />
+                                
+                                <flux:input 
+                                    type="number"
+                                    wire:model="exercises.{{ $targetExercise->id }}.weight_actual"
+                                    :label="__('Weight (lbs)')"
+                                    placeholder="Weight"
+                                    step="0.01"
+                                    min="0"
+                                />
+                            @elseif($isCardio)
+                                <flux:input 
+                                    type="number"
+                                    wire:model="exercises.{{ $targetExercise->id }}.distance_actual"
+                                    :label="__('Distance (miles)')"
+                                    placeholder="Distance"
+                                    step="0.01"
+                                    min="0"
+                                />
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                                        {{ __('Time') }}
+                                    </label>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <flux:input 
+                                            type="number"
+                                            wire:model="exercises.{{ $targetExercise->id }}.time_hours"
+                                            placeholder="Hours"
+                                            min="0"
+                                            max="23"
+                                        />
+                                        <flux:input 
+                                            type="number"
+                                            wire:model="exercises.{{ $targetExercise->id }}.time_minutes"
+                                            placeholder="Minutes"
+                                            min="0"
+                                            max="59"
+                                        />
+                                        <flux:input 
+                                            type="number"
+                                            wire:model="exercises.{{ $targetExercise->id }}.time_seconds"
+                                            placeholder="Seconds"
+                                            min="0"
+                                            max="59"
+                                        />
+                                    </div>
+                                </div>
+                            @else
+                                {{-- For other types (flexibility, other), show all relevant fields --}}
+                                @php
+                                    $hasSets = $targetExercise->sets || ($targetExercise->sets_min && $targetExercise->sets_max);
+                                    $hasReps = $targetExercise->reps || ($targetExercise->reps_min && $targetExercise->reps_max);
+                                    $hasWeight = $targetExercise->weight || ($targetExercise->weight_min && $targetExercise->weight_max);
+                                    $hasDistance = $targetExercise->distance || ($targetExercise->distance_min && $targetExercise->distance_max);
+                                    $hasTime = $targetExercise->time_seconds || ($targetExercise->time_seconds_min && $targetExercise->time_seconds_max);
+                                @endphp
+                                
+                                @if($hasSets)
+                                    <flux:input 
+                                        type="number"
                                         wire:model="exercises.{{ $targetExercise->id }}.sets_actual"
+                                        :label="__('Sets')"
                                         placeholder="Sets"
                                         min="0"
-                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
                                     />
                                 @endif
-                                @if($targetExercise->reps)
-                                    <input type="number" 
+                                
+                                @if($hasReps)
+                                    <flux:input 
+                                        type="number"
                                         wire:model="exercises.{{ $targetExercise->id }}.reps_actual"
+                                        :label="__('Reps')"
                                         placeholder="Reps"
                                         min="0"
-                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
                                     />
                                 @endif
-                                @if($targetExercise->weight)
-                                    <input type="number" 
+                                
+                                @if($hasWeight)
+                                    <flux:input 
+                                        type="number"
                                         wire:model="exercises.{{ $targetExercise->id }}.weight_actual"
-                                        placeholder="Weight (lbs)"
+                                        :label="__('Weight (lbs)')"
+                                        placeholder="Weight"
                                         step="0.01"
                                         min="0"
-                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
                                     />
                                 @endif
-                                @if($targetExercise->distance)
-                                    <input type="number" 
+                                
+                                @if($hasDistance)
+                                    <flux:input 
+                                        type="number"
                                         wire:model="exercises.{{ $targetExercise->id }}.distance_actual"
-                                        placeholder="Distance (miles)"
+                                        :label="__('Distance (miles)')"
+                                        placeholder="Distance"
                                         step="0.01"
                                         min="0"
-                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
                                     />
                                 @endif
-                                @if($targetExercise->time_seconds)
-                                    <input type="number" 
-                                        wire:model="exercises.{{ $targetExercise->id }}.time_seconds_actual"
-                                        placeholder="Time (seconds)"
-                                        min="0"
-                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
-                                    />
+                                
+                                @if($hasTime)
+                                    <div>
+                                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                                            {{ __('Time') }}
+                                        </label>
+                                        <div class="grid grid-cols-3 gap-2">
+                                            <flux:input 
+                                                type="number"
+                                                wire:model="exercises.{{ $targetExercise->id }}.time_hours"
+                                                placeholder="Hours"
+                                                min="0"
+                                                max="23"
+                                            />
+                                            <flux:input 
+                                                type="number"
+                                                wire:model="exercises.{{ $targetExercise->id }}.time_minutes"
+                                                placeholder="Minutes"
+                                                min="0"
+                                                max="59"
+                                            />
+                                            <flux:input 
+                                                type="number"
+                                                wire:model="exercises.{{ $targetExercise->id }}.time_seconds"
+                                                placeholder="Seconds"
+                                                min="0"
+                                                max="59"
+                                            />
+                                        </div>
+                                    </div>
                                 @endif
-                            </div>
-                            <textarea 
+                            @endif
+                            
+                            <flux:textarea 
                                 wire:model="exercises.{{ $targetExercise->id }}.notes"
-                                placeholder="Notes (optional)"
+                                :label="__('Exercise Notes (optional)')"
+                                placeholder="Add any notes about this exercise..."
                                 rows="2"
-                                class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm"
-                            ></textarea>
+                            />
                         </div>
                     </div>
                 </div>
