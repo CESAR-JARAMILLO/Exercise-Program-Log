@@ -78,10 +78,20 @@ new class extends Component {
                             'name' => $exercise->name,
                             'type' => $exercise->type,
                             'sets' => $exercise->sets,
+                            'sets_min' => $exercise->sets_min,
+                            'sets_max' => $exercise->sets_max,
                             'reps' => $exercise->reps,
+                            'reps_min' => $exercise->reps_min,
+                            'reps_max' => $exercise->reps_max,
                             'weight' => $exercise->weight,
+                            'weight_min' => $exercise->weight_min,
+                            'weight_max' => $exercise->weight_max,
                             'distance' => $exercise->distance,
+                            'distance_min' => $exercise->distance_min,
+                            'distance_max' => $exercise->distance_max,
                             'time_seconds' => $exercise->time_seconds,
+                            'time_seconds_min' => $exercise->time_seconds_min,
+                            'time_seconds_max' => $exercise->time_seconds_max,
                         ];
                     }
                 }
@@ -142,10 +152,20 @@ new class extends Component {
             'name' => '',
             'type' => 'strength',
             'sets' => null,
+            'sets_min' => null,
+            'sets_max' => null,
             'reps' => null,
+            'reps_min' => null,
+            'reps_max' => null,
             'weight' => null,
+            'weight_min' => null,
+            'weight_max' => null,
             'distance' => null,
+            'distance_min' => null,
+            'distance_max' => null,
             'time_seconds' => null,
+            'time_seconds_min' => null,
+            'time_seconds_max' => null,
         ];
     }
 
@@ -277,10 +297,20 @@ new class extends Component {
                                     'name' => $exercise['name'],
                                     'type' => $exercise['type'] ?? 'strength',
                                     'sets' => $exercise['sets'] ?? null,
+                                    'sets_min' => $exercise['sets_min'] ?? null,
+                                    'sets_max' => $exercise['sets_max'] ?? null,
                                     'reps' => $exercise['reps'] ?? null,
+                                    'reps_min' => $exercise['reps_min'] ?? null,
+                                    'reps_max' => $exercise['reps_max'] ?? null,
                                     'weight' => $exercise['weight'] ?? null,
+                                    'weight_min' => $exercise['weight_min'] ?? null,
+                                    'weight_max' => $exercise['weight_max'] ?? null,
                                     'distance' => $exercise['distance'] ?? null,
+                                    'distance_min' => $exercise['distance_min'] ?? null,
+                                    'distance_max' => $exercise['distance_max'] ?? null,
                                     'time_seconds' => $exercise['time_seconds'] ?? null,
+                                    'time_seconds_min' => $exercise['time_seconds_min'] ?? null,
+                                    'time_seconds_max' => $exercise['time_seconds_max'] ?? null,
                                     'order' => $order + 1,
                                 ]);
                                 $processedExerciseIds[] = $exercise['id'];
@@ -291,10 +321,20 @@ new class extends Component {
                                     'name' => $exercise['name'],
                                     'type' => $exercise['type'] ?? 'strength',
                                     'sets' => $exercise['sets'] ?? null,
+                                    'sets_min' => $exercise['sets_min'] ?? null,
+                                    'sets_max' => $exercise['sets_max'] ?? null,
                                     'reps' => $exercise['reps'] ?? null,
+                                    'reps_min' => $exercise['reps_min'] ?? null,
+                                    'reps_max' => $exercise['reps_max'] ?? null,
                                     'weight' => $exercise['weight'] ?? null,
+                                    'weight_min' => $exercise['weight_min'] ?? null,
+                                    'weight_max' => $exercise['weight_max'] ?? null,
                                     'distance' => $exercise['distance'] ?? null,
+                                    'distance_min' => $exercise['distance_min'] ?? null,
+                                    'distance_max' => $exercise['distance_max'] ?? null,
                                     'time_seconds' => $exercise['time_seconds'] ?? null,
+                                    'time_seconds_min' => $exercise['time_seconds_min'] ?? null,
+                                    'time_seconds_max' => $exercise['time_seconds_max'] ?? null,
                                     'order' => $order + 1,
                                 ]);
                                 $processedExerciseIds[] = $newExercise->id;
@@ -473,16 +513,23 @@ new class extends Component {
                                                             </div>
                                                         </div>
 
-                                                        <div class="mt-3 grid gap-3 md:grid-cols-4">
+                                                        <div class="mt-3 grid gap-3 md:grid-cols-2">
                                                             <div>
                                                                 <label
                                                                     class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                                                                     {{ __('Sets') }}
                                                                 </label>
-                                                                <input type="number"
-                                                                    wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.sets"
-                                                                    min="1" placeholder="3"
-                                                                    class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                <div class="flex items-center gap-2">
+                                                                    <input type="number"
+                                                                        wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.sets_min"
+                                                                        min="1" placeholder="Min"
+                                                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                    <span class="text-zinc-500 dark:text-zinc-400">-</span>
+                                                                    <input type="number"
+                                                                        wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.sets_max"
+                                                                        min="1" placeholder="Max"
+                                                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                </div>
                                                             </div>
 
                                                             <div>
@@ -490,10 +537,17 @@ new class extends Component {
                                                                     class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                                                                     {{ __('Reps') }}
                                                                 </label>
-                                                                <input type="number"
-                                                                    wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.reps"
-                                                                    min="1" placeholder="10"
-                                                                    class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                <div class="flex items-center gap-2">
+                                                                    <input type="number"
+                                                                        wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.reps_min"
+                                                                        min="1" placeholder="Min"
+                                                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                    <span class="text-zinc-500 dark:text-zinc-400">-</span>
+                                                                    <input type="number"
+                                                                        wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.reps_max"
+                                                                        min="1" placeholder="Max"
+                                                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                </div>
                                                             </div>
 
                                                             <div>
@@ -501,10 +555,17 @@ new class extends Component {
                                                                     class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                                                                     {{ __('Weight (lbs)') }}
                                                                 </label>
-                                                                <input type="number"
-                                                                    wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.weight"
-                                                                    step="0.01" min="0" placeholder="135"
-                                                                    class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                <div class="flex items-center gap-2">
+                                                                    <input type="number"
+                                                                        wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.weight_min"
+                                                                        step="0.01" min="0" placeholder="Min"
+                                                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                    <span class="text-zinc-500 dark:text-zinc-400">-</span>
+                                                                    <input type="number"
+                                                                        wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.weight_max"
+                                                                        step="0.01" min="0" placeholder="Max"
+                                                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                </div>
                                                             </div>
 
                                                             <div>
@@ -512,10 +573,17 @@ new class extends Component {
                                                                     class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                                                                     {{ __('Distance (miles)') }}
                                                                 </label>
-                                                                <input type="number"
-                                                                    wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.distance"
-                                                                    step="0.01" min="0" placeholder="3.5"
-                                                                    class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                <div class="flex items-center gap-2">
+                                                                    <input type="number"
+                                                                        wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.distance_min"
+                                                                        step="0.01" min="0" placeholder="Min"
+                                                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                    <span class="text-zinc-500 dark:text-zinc-400">-</span>
+                                                                    <input type="number"
+                                                                        wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.distance_max"
+                                                                        step="0.01" min="0" placeholder="Max"
+                                                                        class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                </div>
                                                             </div>
                                                         </div>
 
@@ -524,10 +592,17 @@ new class extends Component {
                                                                 class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                                                                 {{ __('Time (seconds)') }}
                                                             </label>
-                                                            <input type="number"
-                                                                wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.time_seconds"
-                                                                min="0" placeholder="1800"
-                                                                class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                            <div class="flex items-center gap-2">
+                                                                <input type="number"
+                                                                    wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.time_seconds_min"
+                                                                    min="0" placeholder="Min"
+                                                                    class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                                <span class="text-zinc-500 dark:text-zinc-400">-</span>
+                                                                <input type="number"
+                                                                    wire:model.live="exercises.{{ $weekNum }}.{{ $dayNum }}.{{ $index }}.time_seconds_max"
+                                                                    min="0" placeholder="Max"
+                                                                    class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500" />
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 @endforeach
