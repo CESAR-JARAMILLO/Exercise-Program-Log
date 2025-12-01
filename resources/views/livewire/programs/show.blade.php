@@ -332,7 +332,7 @@ new class extends Component {
                                                         </div>
 
                                                         <div class="grid gap-3 md:grid-cols-4">
-                                                            @if ($exercise->sets)
+                                                            @if ($exercise->sets || ($exercise->sets_min && $exercise->sets_max))
                                                                 <div>
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -340,12 +340,16 @@ new class extends Component {
                                                                     </p>
                                                                     <p
                                                                         class="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
-                                                                        {{ $exercise->sets }}
+                                                                        @if ($exercise->sets_min && $exercise->sets_max)
+                                                                            {{ $exercise->sets_min }}-{{ $exercise->sets_max }}
+                                                                        @else
+                                                                            {{ $exercise->sets }}
+                                                                        @endif
                                                                     </p>
                                                                 </div>
                                                             @endif
 
-                                                            @if ($exercise->reps)
+                                                            @if ($exercise->reps || ($exercise->reps_min && $exercise->reps_max))
                                                                 <div>
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -353,12 +357,16 @@ new class extends Component {
                                                                     </p>
                                                                     <p
                                                                         class="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
-                                                                        {{ $exercise->reps }}
+                                                                        @if ($exercise->reps_min && $exercise->reps_max)
+                                                                            {{ $exercise->reps_min }}-{{ $exercise->reps_max }}
+                                                                        @else
+                                                                            {{ $exercise->reps }}
+                                                                        @endif
                                                                     </p>
                                                                 </div>
                                                             @endif
 
-                                                            @if ($exercise->weight)
+                                                            @if ($exercise->weight || ($exercise->weight_min && $exercise->weight_max))
                                                                 <div>
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -366,12 +374,16 @@ new class extends Component {
                                                                     </p>
                                                                     <p
                                                                         class="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
-                                                                        {{ $exercise->weight }} lbs
+                                                                        @if ($exercise->weight_min && $exercise->weight_max)
+                                                                            {{ $exercise->weight_min }}-{{ $exercise->weight_max }} lbs
+                                                                        @else
+                                                                            {{ $exercise->weight }} lbs
+                                                                        @endif
                                                                     </p>
                                                                 </div>
                                                             @endif
 
-                                                            @if ($exercise->distance)
+                                                            @if ($exercise->distance || ($exercise->distance_min && $exercise->distance_max))
                                                                 <div>
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -379,13 +391,17 @@ new class extends Component {
                                                                     </p>
                                                                     <p
                                                                         class="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
-                                                                        {{ $exercise->distance }} miles
+                                                                        @if ($exercise->distance_min && $exercise->distance_max)
+                                                                            {{ $exercise->distance_min }}-{{ $exercise->distance_max }} miles
+                                                                        @else
+                                                                            {{ $exercise->distance }} miles
+                                                                        @endif
                                                                     </p>
                                                                 </div>
                                                             @endif
                                                         </div>
 
-                                                        @if ($exercise->time_seconds)
+                                                        @if ($exercise->time_seconds || ($exercise->time_seconds_min && $exercise->time_seconds_max))
                                                             <div class="mt-3">
                                                                 <p
                                                                     class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -393,7 +409,11 @@ new class extends Component {
                                                                 </p>
                                                                 <p
                                                                     class="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
-                                                                    {{ gmdate('H:i:s', $exercise->time_seconds) }}
+                                                                    @if ($exercise->time_seconds_min && $exercise->time_seconds_max)
+                                                                        {{ gmdate('H:i:s', $exercise->time_seconds_min) }}-{{ gmdate('H:i:s', $exercise->time_seconds_max) }}
+                                                                    @else
+                                                                        {{ gmdate('H:i:s', $exercise->time_seconds) }}
+                                                                    @endif
                                                                 </p>
                                                             </div>
                                                         @endif

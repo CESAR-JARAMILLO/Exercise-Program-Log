@@ -211,20 +211,20 @@ new class extends Component {
                     <div>
                         <h4 class="text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-2">{{ __('Target') }}</h4>
                         <div class="space-y-1 text-sm">
-                            @if($targetExercise->sets)
-                                <p>{{ __('Sets: :value', ['value' => $targetExercise->sets]) }}</p>
+                            @if($targetExercise->sets || ($targetExercise->sets_min && $targetExercise->sets_max))
+                                <p>{{ __('Sets: :value', ['value' => ($targetExercise->sets_min && $targetExercise->sets_max) ? $targetExercise->sets_min . '-' . $targetExercise->sets_max : $targetExercise->sets]) }}</p>
                             @endif
-                            @if($targetExercise->reps)
-                                <p>{{ __('Reps: :value', ['value' => $targetExercise->reps]) }}</p>
+                            @if($targetExercise->reps || ($targetExercise->reps_min && $targetExercise->reps_max))
+                                <p>{{ __('Reps: :value', ['value' => ($targetExercise->reps_min && $targetExercise->reps_max) ? $targetExercise->reps_min . '-' . $targetExercise->reps_max : $targetExercise->reps]) }}</p>
                             @endif
-                            @if($targetExercise->weight)
-                                <p>{{ __('Weight: :value lbs', ['value' => $targetExercise->weight]) }}</p>
+                            @if($targetExercise->weight || ($targetExercise->weight_min && $targetExercise->weight_max))
+                                <p>{{ __('Weight: :value lbs', ['value' => ($targetExercise->weight_min && $targetExercise->weight_max) ? $targetExercise->weight_min . '-' . $targetExercise->weight_max : $targetExercise->weight]) }}</p>
                             @endif
-                            @if($targetExercise->distance)
-                                <p>{{ __('Distance: :value miles', ['value' => $targetExercise->distance]) }}</p>
+                            @if($targetExercise->distance || ($targetExercise->distance_min && $targetExercise->distance_max))
+                                <p>{{ __('Distance: :value miles', ['value' => ($targetExercise->distance_min && $targetExercise->distance_max) ? $targetExercise->distance_min . '-' . $targetExercise->distance_max : $targetExercise->distance]) }}</p>
                             @endif
-                            @if($targetExercise->time_seconds)
-                                <p>{{ __('Time: :value', ['value' => gmdate('H:i:s', $targetExercise->time_seconds)]) }}</p>
+                            @if($targetExercise->time_seconds || ($targetExercise->time_seconds_min && $targetExercise->time_seconds_max))
+                                <p>{{ __('Time: :value', ['value' => ($targetExercise->time_seconds_min && $targetExercise->time_seconds_max) ? gmdate('H:i:s', $targetExercise->time_seconds_min) . '-' . gmdate('H:i:s', $targetExercise->time_seconds_max) : gmdate('H:i:s', $targetExercise->time_seconds)]) }}</p>
                             @endif
                         </div>
                     </div>
