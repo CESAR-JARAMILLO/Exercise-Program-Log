@@ -90,23 +90,21 @@
             </div>
         </form>
 
-        @if (app()->environment(['local', 'testing']) || config('app.debug'))
-            <div class="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
-                <form method="POST" action="{{ route('login.store') }}" class="flex flex-col gap-2">
-                    @csrf
-                    <input type="hidden" name="email" value="cesarjaramillodev@gmail.com">
-                    <input type="hidden" name="password" value="Hikelife89!">
-                    <input type="hidden" name="remember" value="1">
-                    <flux:button 
-                        variant="ghost" 
-                        type="submit" 
-                        class="w-full text-xs"
-                    >
-                        {{ __('🧪 Test Login as Trainer') }}
-                    </flux:button>
-                </form>
-            </div>
-        @endif
+        <div class="mt-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+            <form method="POST" action="{{ route('login.store') }}" class="flex flex-col gap-2">
+                @csrf
+                <input type="hidden" name="email" value="cesarjaramillodev@gmail.com">
+                <input type="hidden" name="password" value="Hikelife89!">
+                <input type="hidden" name="remember" value="1">
+                <flux:button 
+                    variant="ghost" 
+                    type="submit" 
+                    class="w-full text-xs"
+                >
+                    {{ __('🧪 Test Login as Trainer') }}
+                </flux:button>
+            </form>
+        </div>
 
         @if (Route::has('register'))
             <div class="space-x-1 text-sm text-center rtl:space-x-reverse text-zinc-600 dark:text-zinc-400">
