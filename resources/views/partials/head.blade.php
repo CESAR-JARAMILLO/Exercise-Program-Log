@@ -11,4 +11,11 @@
 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
+<script>
+    // Set default appearance to dark if not already set
+    if (!localStorage.getItem('flux-appearance')) {
+        localStorage.setItem('flux-appearance', 'dark');
+        document.documentElement.classList.add('dark');
+    }
+</script>
 @fluxAppearance
