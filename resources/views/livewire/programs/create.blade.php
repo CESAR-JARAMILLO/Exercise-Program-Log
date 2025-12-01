@@ -136,6 +136,68 @@ new class extends Component {
         return $available;
     }
 
+    public function copyWeek($sourceWeek, $targetWeek): void
+    {
+        $sourceWeek = (int) $sourceWeek;
+        $targetWeek = (int) $targetWeek;
+
+        if (!isset($this->exercises[$sourceWeek])) {
+            return;
+        }
+
+        // Copy all days and exercises from source week to target week
+        $this->exercises[$targetWeek] = [];
+        $this->restDays[$targetWeek] = [];
+
+        foreach ($this->exercises[$sourceWeek] as $dayNum => $dayExercises) {
+            // Deep copy the exercises array for each day
+            $this->exercises[$targetWeek][$dayNum] = [];
+            foreach ($dayExercises as $exercise) {
+                $this->exercises[$targetWeek][$dayNum][] = [
+                    'name' => $exercise['name'] ?? '',
+                    'type' => $exercise['type'] ?? 'strength',
+                    'sets' => $exercise['sets'] ?? null,
+                    'reps' => $exercise['reps'] ?? null,
+                    'weight' => $exercise['weight'] ?? null,
+                    'distance' => $exercise['distance'] ?? null,
+                    'time_seconds' => $exercise['time_seconds'] ?? null,
+                ];
+            }
+
+            // Copy the rest day status
+            if (isset($this->restDays[$sourceWeek][$dayNum])) {
+                $this->restDays[$targetWeek][$dayNum] = $this->restDays[$sourceWeek][$dayNum];
+            }
+        }
+
+        session()->flash(
+            'copied',
+            __('Week :source copied to Week :target successfully!', [
+                'source' => $sourceWeek,
+                'target' => $targetWeek,
+            ]),
+        );
+    }
+
+    public function getAvailableWeeksToCopy($currentWeek): array
+    {
+        $available = [];
+        for ($week = 1; $week <= $this->length_weeks; $week++) {
+            if ($week != $currentWeek && !empty($this->exercises[$week])) {
+                // Count total exercises across all days in the week
+                $totalExercises = 0;
+                foreach ($this->exercises[$week] as $dayExercises) {
+                    $totalExercises += collect($dayExercises)->filter(fn($ex) => !empty($ex['name']))->count();
+                }
+
+                if ($totalExercises > 0) {
+                    $available[$week] = $totalExercises;
+                }
+            }
+        }
+        return $available;
+    }
+
     public function save(): void
     {
         $user = Auth::user();
@@ -307,17 +369,48 @@ new class extends Component {
             <div class="space-y-4">
                 @foreach ($exercises as $weekNum => $days)
                     <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-                        <button type="button" wire:click="toggleWeek({{ $weekNum }})"
-                            class="w-full flex items-center justify-between p-6 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                        <div
+                            class="flex items-center justify-between p-6 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                             <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                                 {{ __('Week :number', ['number' => $weekNum]) }}
                             </h3>
-                            <svg class="w-5 h-5 text-zinc-500 dark:text-zinc-400 transition-transform {{ $expandedWeeks[$weekNum] ?? true ? 'rotate-180' : '' }}"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
+                            <div class="flex items-center gap-3">
+                                @php
+                                    $availableWeeks = $this->getAvailableWeeksToCopy($weekNum);
+                                @endphp
+                                @if (!empty($availableWeeks))
+                                    <flux:dropdown position="bottom" align="end">
+                                        <flux:button type="button" variant="ghost" size="sm">
+                                            {{ __('Copy Week') }}
+                                        </flux:button>
+
+                                        <flux:menu>
+                                            <flux:menu.heading>{{ __('Copy from:') }}
+                                            </flux:menu.heading>
+                                            @foreach ($availableWeeks as $sourceWeek => $exerciseCount)
+                                                <flux:menu.item
+                                                    wire:click="copyWeek({{ $sourceWeek }}, {{ $weekNum }})"
+                                                    type="button">
+                                                    {{ __('Week :number (:count :exercise)', [
+                                                        'number' => $sourceWeek,
+                                                        'count' => $exerciseCount,
+                                                        'exercise' => $exerciseCount === 1 ? 'exercise' : 'exercises',
+                                                    ]) }}
+                                                </flux:menu.item>
+                                            @endforeach
+                                        </flux:menu>
+                                    </flux:dropdown>
+                                @endif
+                                <button type="button" wire:click="toggleWeek({{ $weekNum }})"
+                                    class="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded transition-colors">
+                                    <svg class="w-5 h-5 text-zinc-500 dark:text-zinc-400 transition-transform {{ $expandedWeeks[$weekNum] ?? true ? 'rotate-180' : '' }}"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
 
                         @if ($expandedWeeks[$weekNum] ?? true)
                             <div class="px-6 pb-6">
