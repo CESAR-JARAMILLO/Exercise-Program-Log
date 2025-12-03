@@ -112,9 +112,9 @@ new class extends Component {
         </div>
     @endif
 
-    <div class="mb-6 flex items-center justify-between">
-        <div>
-            <div class="flex items-center gap-2">
+    <div class="mb-6 flex flex-col md:flex-row items-center md:items-center md:justify-between gap-4">
+        <div class="flex-1 min-w-0 w-full md:w-auto text-center lg:text-left">
+            <div class="flex flex-col sm:flex-row items-center sm:items-center justify-center lg:justify-start gap-2 mb-1">
                 <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                     {{ $program->name }}
                 </h1>
@@ -124,11 +124,11 @@ new class extends Component {
                     </span>
                 @endif
             </div>
-            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <p class="text-sm text-zinc-600 dark:text-zinc-400">
                 {{ $program->description ?? __('View your training program details') }}
             </p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
             @if ($user->isTrainer() && $program->isTemplate() && ($program->user_id === $user->id || $program->trainer_id === $user->id))
                 <flux:button href="{{ route('programs.assign', $program) }}" variant="primary" wire:navigate>
                     {{ __('Assign to Client') }}
@@ -308,12 +308,12 @@ new class extends Component {
                                 @foreach ($week->days->sortBy('day_number') as $day)
                                     <div
                                         class="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 bg-neutral-50 dark:bg-neutral-800/50">
-                                        <h4 class="mb-3 font-medium text-zinc-900 dark:text-zinc-100">
+                                        <h4 class="mb-3 font-medium text-zinc-900 dark:text-zinc-100 text-center md:text-left">
                                             {{ $day->label ?: __('Day :number', ['number' => $day->day_number]) }}
                                         </h4>
 
                                         @if ($day->exercises->isEmpty())
-                                            <p class="text-sm text-zinc-500 dark:text-zinc-400 italic">
+                                            <p class="text-sm text-zinc-500 dark:text-zinc-400 italic text-center md:text-left">
                                                 {{ __('No exercises for this day.') }}
                                             </p>
                                         @else
@@ -321,7 +321,7 @@ new class extends Component {
                                                 @foreach ($day->exercises as $exercise)
                                                     <div
                                                         class="rounded border border-neutral-200 dark:border-neutral-600 p-4 bg-white dark:bg-neutral-900">
-                                                        <div class="mb-3">
+                                                        <div class="mb-3 text-center md:text-left">
                                                             <h5 class="font-medium text-zinc-900 dark:text-zinc-100">
                                                                 {{ $exercise->name }}
                                                             </h5>
@@ -333,7 +333,7 @@ new class extends Component {
 
                                                         <div class="grid gap-3 md:grid-cols-4">
                                                             @if ($exercise->sets || ($exercise->sets_min && $exercise->sets_max))
-                                                                <div>
+                                                                <div class="text-center md:text-left">
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
                                                                         {{ __('Sets') }}
@@ -350,7 +350,7 @@ new class extends Component {
                                                             @endif
 
                                                             @if ($exercise->reps || ($exercise->reps_min && $exercise->reps_max))
-                                                                <div>
+                                                                <div class="text-center md:text-left">
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
                                                                         {{ __('Reps') }}
@@ -367,7 +367,7 @@ new class extends Component {
                                                             @endif
 
                                                             @if ($exercise->weight || ($exercise->weight_min && $exercise->weight_max))
-                                                                <div>
+                                                                <div class="text-center md:text-left">
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
                                                                         {{ __('Weight') }}
@@ -384,7 +384,7 @@ new class extends Component {
                                                             @endif
 
                                                             @if ($exercise->distance || ($exercise->distance_min && $exercise->distance_max))
-                                                                <div>
+                                                                <div class="text-center md:text-left">
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
                                                                         {{ __('Distance') }}
@@ -402,7 +402,7 @@ new class extends Component {
                                                         </div>
 
                                                         @if ($exercise->time_seconds || ($exercise->time_seconds_min && $exercise->time_seconds_max))
-                                                            <div class="mt-3">
+                                                            <div class="mt-3 text-center md:text-left">
                                                                 <p
                                                                     class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
                                                                     {{ __('Time') }}
