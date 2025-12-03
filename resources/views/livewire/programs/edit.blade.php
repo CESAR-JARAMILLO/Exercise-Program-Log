@@ -382,7 +382,7 @@ new class extends Component {
         </div>
     @endif
 
-    <div class="mb-6">
+    <div class="mb-6 text-center lg:text-left">
         <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
             {{ __('Edit Program') }}
         </h1>
