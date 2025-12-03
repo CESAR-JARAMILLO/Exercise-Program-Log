@@ -81,7 +81,7 @@ new class extends Component {
     }
 }; ?>
 
-<section class="w-full">
+<section class="w-full px-2 sm:px-0">
     @if (session('success'))
         <div
             class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/50 dark:text-green-200">
@@ -96,8 +96,8 @@ new class extends Component {
         </div>
     @endif
 
-    <div class="mb-6 flex items-center justify-between">
-        <div>
+    <div class="mb-6 flex flex-col md:flex-row items-center md:items-center justify-between gap-4">
+        <div class="flex-1 min-w-0 w-full md:w-auto text-center lg:text-left">
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                 {{ __('My Programs') }}
             </h1>
@@ -114,15 +114,17 @@ new class extends Component {
                 @endif
             </p>
         </div>
-        @if ($canCreateProgram)
-            <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate>
-                {{ __('Create Program') }}
-            </flux:button>
-        @else
-            <flux:button href="{{ route('programs.create') }}" variant="primary" disabled>
-                {{ __('Create Program') }}
-            </flux:button>
-        @endif
+        <div class="w-full md:w-auto">
+            @if ($canCreateProgram)
+                <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate class="w-full md:w-auto">
+                    {{ __('Create Program') }}
+                </flux:button>
+            @else
+                <flux:button href="{{ route('programs.create') }}" variant="primary" disabled class="w-full md:w-auto">
+                    {{ __('Create Program') }}
+                </flux:button>
+            @endif
+        </div>
     </div>
 
     @if (!$canCreateProgram)
@@ -151,10 +153,10 @@ new class extends Component {
             @endif
         </div>
     @else
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div class="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
             @foreach ($programs as $program)
                 <div
-                    class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
+                    class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-3 sm:p-4 md:p-6 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors w-full max-w-full sm:max-w-sm md:max-w-none mx-auto md:mx-0">
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex-1">
                             <div class="flex items-center gap-2 flex-wrap">
@@ -214,7 +216,7 @@ new class extends Component {
                         @endif
                     </div>
 
-                    <div class="flex items-center gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+                    <div class="flex flex-wrap items-center gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-700">
                         <flux:button href="{{ route('programs.show', $program) }}" variant="ghost" size="sm"
                             wire:navigate>
                             {{ __('View') }}
