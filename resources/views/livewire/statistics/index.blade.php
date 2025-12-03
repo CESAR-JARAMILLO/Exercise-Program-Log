@@ -223,27 +223,29 @@ new class extends Component {
             @php
                 $maxCount = collect($workoutFrequency)->max('count') ?? 1;
             @endphp
-            <div class="flex items-end justify-between gap-2 h-48">
-                @foreach($workoutFrequency as $week)
-                    <div class="flex-1 flex flex-col items-center gap-2">
-                        <div class="w-full flex items-end justify-center" style="height: 180px;">
-                            @if($week['count'] > 0)
-                                <div 
-                                    class="w-full rounded-t bg-blue-500 dark:bg-blue-600 transition-all hover:bg-blue-600 dark:hover:bg-blue-500 cursor-pointer"
-                                    style="height: {{ max(10, ($week['count'] / $maxCount) * 100) }}%"
-                                    title="{{ $week['count'] }} {{ __('workouts') }}"
-                                ></div>
-                            @else
-                                <div 
-                                    class="w-full rounded-t bg-zinc-200 dark:bg-neutral-700"
-                                    style="height: 2px"
-                                    title="0 {{ __('workouts') }}"
-                                ></div>
-                            @endif
+            <div class="overflow-x-auto -mx-6 px-6">
+                <div class="flex items-end gap-2 h-48 min-w-max">
+                    @foreach($workoutFrequency as $week)
+                        <div class="flex flex-col items-center gap-2 min-w-[3rem] sm:min-w-0 sm:flex-1">
+                            <div class="w-full flex items-end justify-center" style="height: 180px;">
+                                @if($week['count'] > 0)
+                                    <div 
+                                        class="w-full rounded-t bg-blue-500 dark:bg-blue-600 transition-all hover:bg-blue-600 dark:hover:bg-blue-500 cursor-pointer"
+                                        style="height: {{ max(10, ($week['count'] / $maxCount) * 100) }}%"
+                                        title="{{ $week['count'] }} {{ __('workouts') }}"
+                                    ></div>
+                                @else
+                                    <div 
+                                        class="w-full rounded-t bg-zinc-200 dark:bg-neutral-700"
+                                        style="height: 2px"
+                                        title="0 {{ __('workouts') }}"
+                                    ></div>
+                                @endif
+                            </div>
+                            <span class="text-xs text-zinc-600 dark:text-zinc-400 transform -rotate-45 origin-top-left whitespace-nowrap">{{ $week['week'] }}</span>
                         </div>
-                        <span class="text-xs text-zinc-600 dark:text-zinc-400 transform -rotate-45 origin-top-left whitespace-nowrap">{{ $week['week'] }}</span>
-                    </div>
-                @endforeach
+                    @endforeach
+                </div>
             </div>
         </div>
 
