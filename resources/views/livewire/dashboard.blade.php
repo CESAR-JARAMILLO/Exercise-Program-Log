@@ -26,10 +26,7 @@ new class extends Component {
         }
 
         // Get template programs for "Start Program" button
-        $templatePrograms = Program::where('user_id', Auth::id())
-            ->where('status', 'template')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $templatePrograms = Program::where('user_id', Auth::id())->where('status', 'template')->orderBy('created_at', 'desc')->get();
 
         return [
             'activePrograms' => $activePrograms,
@@ -41,9 +38,10 @@ new class extends Component {
 
 <section class="w-full">
     <div class="flex h-full w-full flex-1 flex-col gap-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <div class="flex items-center gap-3">
+        <div class="flex flex-col md:flex-row items-center md:items-center justify-between gap-4">
+            <div class="flex-1 min-w-0 w-full md:w-auto text-center lg:text-left">
+                <div
+                    class="flex flex-col sm:flex-row items-center sm:items-center justify-center lg:justify-start gap-3 mb-2">
                     <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                         {{ __('Dashboard') }}
                     </h1>
@@ -51,53 +49,57 @@ new class extends Component {
                         {{ __('View Statistics') }}
                     </flux:button>
                 </div>
-                <div class="mt-1 flex items-center gap-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-center lg:justify-start gap-2 sm:gap-3">
                     <p class="text-sm text-zinc-600 dark:text-zinc-400">
                         {{ __('Your active training programs') }}
                     </p>
-                    <span class="text-zinc-400 dark:text-zinc-500">•</span>
-                    <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400"
-                         x-data="{ 
-                             timezone: '{{ auth()->user()->getTimezone() }}',
-                             updateTime() {
-                                 const now = new Date();
-                                 const formatter = new Intl.DateTimeFormat('en-US', {
-                                     timeZone: this.timezone,
-                                     month: 'short',
-                                     day: 'numeric',
-                                     year: 'numeric',
-                                     hour: 'numeric',
-                                     minute: '2-digit',
-                                     hour12: true
-                                 });
-                                 const parts = formatter.formatToParts(now);
-                                 const month = parts.find(p => p.type === 'month')?.value || '';
-                                 const day = parts.find(p => p.type === 'day')?.value || '';
-                                 const year = parts.find(p => p.type === 'year')?.value || '';
-                                 const hour = parts.find(p => p.type === 'hour')?.value || '';
-                                 const minute = parts.find(p => p.type === 'minute')?.value || '';
-                                 const period = parts.find(p => p.type === 'dayPeriod')?.value || '';
-                                 
-                                 this.$el.querySelector('[data-date]').textContent = `${month} ${day}, ${year}`;
-                                 this.$el.querySelector('[data-time]').textContent = `${hour}:${minute} ${period}`;
-                             },
-                             init() {
-                                 this.updateTime();
-                                 setInterval(() => this.updateTime(), 1000);
-                             }
-                         }">
-                        <span class="font-medium" data-date>{{ now()->setTimezone(auth()->user()->getTimezone())->format('M d, Y') }}</span>
+                    <span class="hidden sm:inline text-zinc-400 dark:text-zinc-500">•</span>
+                    <div class="flex items-center justify-center lg:justify-start gap-2 text-sm text-zinc-600 dark:text-zinc-400"
+                        x-data="{
+                            timezone: '{{ auth()->user()->getTimezone() }}',
+                            updateTime() {
+                                const now = new Date();
+                                const formatter = new Intl.DateTimeFormat('en-US', {
+                                    timeZone: this.timezone,
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: 'numeric',
+                                    minute: '2-digit',
+                                    hour12: true
+                                });
+                                const parts = formatter.formatToParts(now);
+                                const month = parts.find(p => p.type === 'month')?.value || '';
+                                const day = parts.find(p => p.type === 'day')?.value || '';
+                                const year = parts.find(p => p.type === 'year')?.value || '';
+                                const hour = parts.find(p => p.type === 'hour')?.value || '';
+                                const minute = parts.find(p => p.type === 'minute')?.value || '';
+                                const period = parts.find(p => p.type === 'dayPeriod')?.value || '';
+                        
+                                this.$el.querySelector('[data-date]').textContent = `${month} ${day}, ${year}`;
+                                this.$el.querySelector('[data-time]').textContent = `${hour}:${minute} ${period}`;
+                            },
+                            init() {
+                                this.updateTime();
+                                setInterval(() => this.updateTime(), 1000);
+                            }
+                        }">
+                        <span class="font-medium"
+                            data-date>{{ now()->setTimezone(auth()->user()->getTimezone())->format('M d, Y') }}</span>
                         <span data-time>{{ now()->setTimezone(auth()->user()->getTimezone())->format('g:i A') }}</span>
                     </div>
                 </div>
             </div>
-            <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate>
-                {{ __('Create Program') }}
-            </flux:button>
+            <div class="w-full md:w-auto">
+                <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate
+                    class="w-full md:w-auto">
+                    {{ __('Create Program') }}
+                </flux:button>
+            </div>
         </div>
-
         @if ($activePrograms->isEmpty())
-            <div class="flex flex-1 items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 p-12">
+            <div
+                class="flex flex-1 items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 p-12">
                 <div class="text-center">
                     <h2 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
                         {{ __('No Active Programs') }}
@@ -105,11 +107,13 @@ new class extends Component {
                     <p class="text-zinc-600 dark:text-zinc-400 mb-6">
                         {{ __('Get started by creating a program or starting an existing template.') }}
                     </p>
-                    <div class="flex items-center justify-center gap-3">
-                        <flux:button href="{{ route('programs.index') }}" variant="primary" wire:navigate>
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <flux:button href="{{ route('programs.index') }}" variant="primary" wire:navigate
+                            class="w-full sm:w-auto">
                             {{ __('Start a Program') }}
                         </flux:button>
-                        <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate>
+                        <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate
+                            class="w-full sm:w-auto">
                             {{ __('Create Program') }}
                         </flux:button>
                     </div>
@@ -123,13 +127,16 @@ new class extends Component {
                         $todayStatus = $item['todayStatus'];
                         $program = $activeProgram->program;
                     @endphp
-                    <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
+                    <div
+                        class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 sm:p-6 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors max-w-sm md:max-w-none mx-auto md:mx-0">
                         <div class="mb-4">
-                            <div class="flex items-start justify-between mb-2">
-                                <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <h3
+                                    class="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 flex-1 min-w-0">
                                     {{ $program->name }}
                                 </h3>
-                                <span class="rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300">
+                                <span
+                                    class="rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300 flex-shrink-0">
                                     {{ __('Active') }}
                                 </span>
                             </div>
@@ -147,7 +154,8 @@ new class extends Component {
                             </div>
                             <div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
                                 <span class="font-medium">{{ __('Week:') }}</span>
-                                <span class="ml-2">{{ $activeProgram->current_week }} / {{ $program->length_weeks }}</span>
+                                <span class="ml-2">{{ $activeProgram->current_week }} /
+                                    {{ $program->length_weeks }}</span>
                             </div>
                             @if ($todayStatus)
                                 <div class="flex items-center text-sm">
@@ -164,29 +172,27 @@ new class extends Component {
                             @endif
                         </div>
 
-                        <div class="flex items-center gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+                        <div
+                            class="flex flex-wrap items-center gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-700">
                             <flux:button href="{{ route('programs.show', $program) }}" variant="ghost" size="sm"
-                                wire:navigate>
+                                wire:navigate class="flex-1 sm:flex-none min-w-0">
                                 {{ __('View') }}
                             </flux:button>
                             @if ($todayStatus && !$todayStatus['isLogged'])
                                 <flux:button
                                     href="{{ route('workouts.log', ['activeProgram' => $activeProgram->id, 'date' => now()->format('Y-m-d')]) }}"
-                                    variant="primary" size="sm" wire:navigate>
+                                    variant="primary" size="sm" wire:navigate class="flex-1 sm:flex-none min-w-0">
                                     {{ __('Log Workout') }}
                                 </flux:button>
                             @else
                                 <flux:button href="{{ route('workouts.calendar') }}" variant="primary" size="sm"
-                                    wire:navigate>
+                                    wire:navigate class="flex-1 sm:flex-none min-w-0">
                                     {{ __('Calendar') }}
                                 </flux:button>
                             @endif
-                            <flux:button 
-                                href="{{ route('active-programs.stop', $activeProgram) }}" 
-                                variant="ghost" 
-                                size="sm"
-                                wire:navigate
-                                class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                            <flux:button href="{{ route('active-programs.stop', $activeProgram) }}" variant="ghost"
+                                size="sm" wire:navigate
+                                class="flex-1 sm:flex-none min-w-0 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
                                 {{ __('Stop') }}
                             </flux:button>
                         </div>
@@ -196,4 +202,3 @@ new class extends Component {
         @endif
     </div>
 </section>
-
