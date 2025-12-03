@@ -13,9 +13,7 @@ new class extends Component {
         abort_unless($trainer && $trainer->canViewClientAnalytics(), 403);
 
         $clientParam = request()->route('client');
-        $client = $clientParam instanceof User
-            ? $clientParam
-            : User::findOrFail($clientParam);
+        $client = $clientParam instanceof User ? $clientParam : User::findOrFail($clientParam);
 
         $analyticsService = app(TrainerAnalyticsService::class);
         $analytics = $analyticsService->getClientAnalytics($trainer, $client);
@@ -45,7 +43,7 @@ new class extends Component {
     }
 }; ?>
 
-<section class="w-full">
+<section class="w-full overflow-x-hidden">
     <x-slot:header>
         <div>
             <p class="text-sm text-neutral-500 dark:text-neutral-400 uppercase">{{ __('Client Analytics') }}</p>
@@ -81,30 +79,33 @@ new class extends Component {
     </div>
 
     <div class="mt-8 grid gap-6 lg:grid-cols-2">
-        <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 bg-white dark:bg-neutral-900">
+        <div
+            class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 bg-white dark:bg-neutral-900 overflow-hidden">
             <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-4">
                 {{ __('Workout Frequency (Last 12 Weeks)') }}
             </h3>
             @php
                 $maxCount = collect($workoutTrend)->max('count') ?: 1;
             @endphp
-            <div class="flex items-end gap-3 h-48">
-                @foreach ($workoutTrend as $week)
-                    <div class="flex-1 flex flex-col items-center gap-2">
-                        <div class="w-full flex items-end justify-center" style="height: 180px;">
-                            <div
-                                class="{{ $week['count'] > 0 ? 'bg-green-500 dark:bg-green-400' : 'bg-neutral-200 dark:bg-neutral-700' }} w-full rounded-t"
-                                style="height: {{ $week['count'] > 0 ? max(10, ($week['count'] / $maxCount) * 100) : 2 }}%"
-                                title="{{ $week['count'] }} {{ __('workouts') }}"
-                            ></div>
+            <div class="overflow-x-auto -mx-6 px-6">
+                <div class="flex items-end gap-2 h-48 min-w-max">
+                    @foreach ($workoutTrend as $week)
+                        <div class="flex flex-col items-center gap-2 min-w-[3rem] sm:min-w-0 sm:flex-1">
+                            <div class="w-full flex items-end justify-center" style="height: 180px;">
+                                <div class="{{ $week['count'] > 0 ? 'bg-green-500 dark:bg-green-400' : 'bg-neutral-200 dark:bg-neutral-700' }} w-full rounded-t"
+                                    style="height: {{ $week['count'] > 0 ? max(10, ($week['count'] / $maxCount) * 100) : 2 }}%"
+                                    title="{{ $week['count'] }} {{ __('workouts') }}"></div>
+                            </div>
+                            <span
+                                class="text-xs text-neutral-500 dark:text-neutral-400 transform -rotate-45 origin-top-left whitespace-nowrap">{{ $week['label'] }}</span>
                         </div>
-                        <span class="text-xs text-neutral-500 dark:text-neutral-400 rotate-[-45deg] origin-top-left">{{ $week['label'] }}</span>
-                    </div>
-                @endforeach
+                    @endforeach
+                </div>
             </div>
         </div>
 
-        <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 bg-white dark:bg-neutral-900">
+        <div
+            class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 sm:p-6 bg-white dark:bg-neutral-900">
             <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-4">
                 {{ __('Assigned Programs') }}
             </h3>
@@ -113,36 +114,39 @@ new class extends Component {
                     {{ __('No programs have been assigned to this client yet.') }}
                 </p>
             @else
-                <div class="space-y-4">
+                <div class="space-y-3 sm:space-y-4">
                     @foreach ($assignedPrograms as $assignment)
-                        <div class="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
-                            <div class="flex items-center justify-between mb-2">
-                                <div>
-                                    <p class="font-semibold text-neutral-900 dark:text-neutral-100">
+                        <div class="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 sm:p-4">
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-semibold text-neutral-900 dark:text-neutral-100 truncate">
                                         {{ $assignment['program']->name }}
                                     </p>
                                     <p class="text-xs text-neutral-500 dark:text-neutral-400">
                                         {{ __('Assigned :date', ['date' => $assignment['assigned_at']->format('M d, Y')]) }}
                                     </p>
                                 </div>
-                                <span class="text-xs px-2 py-1 rounded-full
+                                <span
+                                    class="text-xs px-2 py-1 rounded-full flex-shrink-0
                                     @class([
-                                        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' => $assignment['status'] === 'assigned',
-                                        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' => $assignment['status'] === 'started',
-                                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' => $assignment['status'] === 'completed',
+                                        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' =>
+                                            $assignment['status'] === 'assigned',
+                                        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' =>
+                                            $assignment['status'] === 'started',
+                                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' =>
+                                            $assignment['status'] === 'completed',
                                     ])">
                                     {{ ucfirst($assignment['status']) }}
                                 </span>
                             </div>
                             @if ($assignment['progress'] !== null)
                                 <div class="w-full bg-neutral-200 dark:bg-neutral-800 rounded-full h-2 mt-2">
-                                    <div
-                                        class="bg-green-500 dark:bg-green-400 h-2 rounded-full"
-                                        style="width: {{ $assignment['progress'] }}%"
-                                    ></div>
+                                    <div class="bg-green-500 dark:bg-green-400 h-2 rounded-full"
+                                        style="width: {{ $assignment['progress'] }}%"></div>
                                 </div>
                                 <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                    {{ $assignment['logged'] }} / {{ $assignment['total'] }} {{ __('workouts logged') }}
+                                    {{ $assignment['logged'] }} / {{ $assignment['total'] }}
+                                    {{ __('workouts logged') }}
                                     ({{ $assignment['progress'] }}%)
                                 </p>
                             @else
@@ -169,13 +173,15 @@ new class extends Component {
             @else
                 <div class="space-y-3">
                     @foreach ($recentWorkouts as $log)
-                        <div class="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-700 p-3">
+                        <div
+                            class="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-700 p-3">
                             <div>
                                 <p class="font-medium text-neutral-900 dark:text-neutral-100">
                                     {{ optional($log->activeProgram->program)->name ?? __('Program') }}
                                 </p>
                                 <p class="text-xs text-neutral-500 dark:text-neutral-400">
-                                    {{ $log->workout_date->format('M d, Y') }} • {{ $log->exercises->count() }} {{ __('exercises') }}
+                                    {{ $log->workout_date->format('M d, Y') }} • {{ $log->exercises->count() }}
+                                    {{ __('exercises') }}
                                 </p>
                             </div>
                         </div>
@@ -197,7 +203,8 @@ new class extends Component {
                     @foreach ($mostPerformedExercises as $exercise)
                         <li class="flex items-center justify-between text-sm text-neutral-600 dark:text-neutral-300">
                             <span>{{ $exercise['name'] }}</span>
-                            <span class="font-semibold text-neutral-900 dark:text-neutral-100">{{ $exercise['count'] }}</span>
+                            <span
+                                class="font-semibold text-neutral-900 dark:text-neutral-100">{{ $exercise['count'] }}</span>
                         </li>
                     @endforeach
                 </ul>
@@ -209,54 +216,58 @@ new class extends Component {
         <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-4">
             {{ __('Personal Records') }}
         </h3>
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div>
+        <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="min-w-0">
                 <p class="text-xs uppercase text-neutral-500 dark:text-neutral-400">{{ __('Max Weight') }}</p>
                 @if ($personalRecords['max_weight'])
                     <p class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
                         {{ $personalRecords['max_weight'] }} {{ __('lbs') }}
                     </p>
-                    <p class="text-xs text-neutral-500 dark:text-neutral-400">
-                        {{ $personalRecords['max_weight_exercise'] }} • {{ optional($personalRecords['max_weight_date'])->format('M d, Y') }}
+                    <p class="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                        {{ $personalRecords['max_weight_exercise'] }} •
+                        {{ optional($personalRecords['max_weight_date'])->format('M d, Y') }}
                     </p>
                 @else
                     <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ __('N/A') }}</p>
                 @endif
             </div>
-            <div>
+            <div class="min-w-0">
                 <p class="text-xs uppercase text-neutral-500 dark:text-neutral-400">{{ __('Max Reps') }}</p>
                 @if ($personalRecords['max_reps'])
                     <p class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
                         {{ $personalRecords['max_reps'] }}
                     </p>
-                    <p class="text-xs text-neutral-500 dark:text-neutral-400">
-                        {{ $personalRecords['max_reps_exercise'] }} • {{ optional($personalRecords['max_reps_date'])->format('M d, Y') }}
+                    <p class="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                        {{ $personalRecords['max_reps_exercise'] }} •
+                        {{ optional($personalRecords['max_reps_date'])->format('M d, Y') }}
                     </p>
                 @else
                     <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ __('N/A') }}</p>
                 @endif
             </div>
-            <div>
+            <div class="min-w-0">
                 <p class="text-xs uppercase text-neutral-500 dark:text-neutral-400">{{ __('Max Distance') }}</p>
                 @if ($personalRecords['max_distance'])
                     <p class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
                         {{ $personalRecords['max_distance'] }} {{ __('mi') }}
                     </p>
-                    <p class="text-xs text-neutral-500 dark:text-neutral-400">
-                        {{ $personalRecords['max_distance_exercise'] }} • {{ optional($personalRecords['max_distance_date'])->format('M d, Y') }}
+                    <p class="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                        {{ $personalRecords['max_distance_exercise'] }} •
+                        {{ optional($personalRecords['max_distance_date'])->format('M d, Y') }}
                     </p>
                 @else
                     <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ __('N/A') }}</p>
                 @endif
             </div>
-            <div>
+            <div class="min-w-0">
                 <p class="text-xs uppercase text-neutral-500 dark:text-neutral-400">{{ __('Best Time') }}</p>
                 @if ($personalRecords['best_time'])
                     <p class="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
                         {{ gmdate('H:i:s', $personalRecords['best_time']) }}
                     </p>
-                    <p class="text-xs text-neutral-500 dark:text-neutral-400">
-                        {{ $personalRecords['best_time_exercise'] }} • {{ optional($personalRecords['best_time_date'])->format('M d, Y') }}
+                    <p class="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                        {{ $personalRecords['best_time_exercise'] }} •
+                        {{ optional($personalRecords['best_time_date'])->format('M d, Y') }}
                     </p>
                 @else
                     <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ __('N/A') }}</p>
@@ -265,7 +276,3 @@ new class extends Component {
         </div>
     </div>
 </section>
-
-
-
-
