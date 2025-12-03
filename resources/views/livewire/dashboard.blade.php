@@ -36,8 +36,8 @@ new class extends Component {
     }
 }; ?>
 
-<section class="w-full">
-    <div class="flex h-full w-full flex-1 flex-col gap-6">
+<section class="w-full px-2 sm:px-0">
+    <div class="flex h-full w-full flex-1 flex-col gap-4 sm:gap-6">
         <div class="flex flex-col md:flex-row items-center md:items-center justify-between gap-4">
             <div class="flex-1 min-w-0 w-full md:w-auto text-center lg:text-left">
                 <div
@@ -120,7 +120,7 @@ new class extends Component {
                 </div>
             </div>
         @else
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div class="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
                 @foreach ($activeProgramsWithStatus as $item)
                     @php
                         $activeProgram = $item['activeProgram'];
@@ -128,7 +128,7 @@ new class extends Component {
                         $program = $activeProgram->program;
                     @endphp
                     <div
-                        class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 sm:p-6 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors max-w-sm md:max-w-none mx-auto md:mx-0">
+                        class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-3 sm:p-4 md:p-6 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors w-full max-w-full sm:max-w-sm md:max-w-none mx-auto md:mx-0">
                         <div class="mb-4">
                             <div class="flex items-start justify-between gap-2 mb-2">
                                 <h3
