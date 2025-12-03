@@ -114,8 +114,8 @@ new class extends Component {
         </div>
     @endif
 
-    <div class="mb-6 flex items-center justify-between">
-        <div>
+    <div class="mb-6 flex flex-col md:flex-row items-center md:items-center md:justify-between gap-4">
+        <div class="flex-1 min-w-0 w-full md:w-auto text-center lg:text-left">
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                 {{ __('Workout Calendar') }}
             </h1>
@@ -123,7 +123,7 @@ new class extends Component {
                 {{ __('View and log your scheduled workouts') }}
             </p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
             <flux:button href="{{ route('workouts.history') }}" variant="ghost" wire:navigate>
                 {{ __('History') }}
             </flux:button>
@@ -144,23 +144,24 @@ new class extends Component {
         </div>
     @else
         <!-- Calendar Navigation -->
-        <div class="mb-6 flex items-center justify-between">
-            <flux:button wire:click="previousMonth" variant="ghost" size="sm">
-                {{ __('← Previous') }}
-            </flux:button>
-            
-            <div class="flex items-center gap-4">
-                <h2 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                    {{ $startOfMonth->format('F Y') }}
-                </h2>
-                <flux:button wire:click="goToToday" variant="ghost" size="sm">
-                    {{ __('Today') }}
+        <div class="mb-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2 w-full sm:w-auto order-2 sm:order-1">
+                <flux:button wire:click="previousMonth" variant="ghost" size="sm" class="flex-1 sm:flex-none">
+                    {{ __('← Previous') }}
+                </flux:button>
+                <flux:button wire:click="nextMonth" variant="ghost" size="sm" class="flex-1 sm:flex-none">
+                    {{ __('Next →') }}
                 </flux:button>
             </div>
             
-            <flux:button wire:click="nextMonth" variant="ghost" size="sm">
-                {{ __('Next →') }}
-            </flux:button>
+            <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 order-1 sm:order-2">
+                <h2 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100 text-center sm:text-left">
+                    {{ $startOfMonth->format('F Y') }}
+                </h2>
+                <flux:button wire:click="goToToday" variant="ghost" size="sm" class="w-full sm:w-auto">
+                    {{ __('Today') }}
+                </flux:button>
+            </div>
         </div>
 
         <!-- Calendar -->
@@ -230,7 +231,7 @@ new class extends Component {
         </div>
 
         <!-- Legend -->
-        <div class="mt-4 flex items-center gap-6 text-sm text-zinc-600 dark:text-zinc-400">
+        <div class="mt-4 flex flex-wrap items-center justify-center sm:justify-start gap-4 sm:gap-6 text-sm text-zinc-600 dark:text-zinc-400">
             <div class="flex items-center gap-2">
                 <span class="w-3 h-3 rounded-full bg-blue-500"></span>
                 <span>{{ __('Scheduled') }}</span>
