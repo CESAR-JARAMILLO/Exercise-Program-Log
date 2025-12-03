@@ -21,8 +21,8 @@ new class extends Component {
 }; ?>
 
 <section class="w-full">
-    <div class="mb-6 flex items-center justify-between">
-        <div>
+    <div class="mb-6 flex flex-col md:flex-row items-center md:items-center md:justify-between gap-4">
+        <div class="flex-1 min-w-0 w-full md:w-auto text-center lg:text-left">
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                 {{ __('Workout History') }}
             </h1>
@@ -30,7 +30,7 @@ new class extends Component {
                 {{ __('View all your logged workouts') }}
             </p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
             <flux:button href="{{ route('workouts.calendar') }}" variant="ghost" wire:navigate>
                 {{ __('Calendar') }}
             </flux:button>
