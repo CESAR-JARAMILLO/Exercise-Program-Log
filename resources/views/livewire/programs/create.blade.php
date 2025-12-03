@@ -486,8 +486,8 @@ new class extends Component {
                                     @foreach ($days as $dayNum => $dayExercises)
                                         <div
                                             class="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 bg-neutral-50 dark:bg-neutral-800/50">
-                                            <div class="mb-3 flex items-center justify-between">
-                                                <div class="flex items-center gap-3">
+                                            <div class="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                <div class="flex flex-col items-center sm:items-start text-center sm:text-left">
                                                     <h4 class="font-medium text-zinc-900 dark:text-zinc-100">
                                                         {{ __('Day :number', ['number' => $dayNum]) }}
                                                     </h4>
@@ -499,12 +499,12 @@ new class extends Component {
                                                             );
                                                     @endphp
                                                     @if (!$hasExercises)
-                                                        <span class="text-xs text-zinc-500 dark:text-zinc-400 italic">
+                                                        <span class="text-xs text-zinc-500 dark:text-zinc-400 italic mt-1">
                                                             {{ __('(Rest Day - No exercises)') }}
                                                         </span>
                                                     @else
                                                         <label
-                                                            class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                                                            class="flex items-center justify-center sm:justify-start gap-2 text-sm text-zinc-600 dark:text-zinc-400 mt-1">
                                                             <input type="checkbox"
                                                                 wire:model="restDays.{{ $weekNum }}.{{ $dayNum }}"
                                                                 class="rounded border-neutral-300 text-primary-600 focus:ring-primary-500">
@@ -512,7 +512,7 @@ new class extends Component {
                                                         </label>
                                                     @endif
                                                 </div>
-                                                <div class="flex items-center gap-2">
+                                                <div class="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
                                                     <flux:button type="button"
                                                         wire:click="addExercise({{ $weekNum }}, {{ $dayNum }})"
                                                         variant="ghost" size="sm">
