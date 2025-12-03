@@ -164,8 +164,89 @@ new class extends Component {
             </div>
         </div>
 
-        <!-- Calendar -->
-        <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+        <!-- Mobile List View -->
+        <div class="md:hidden space-y-3">
+            @php
+                $currentMonthDays = collect($calendarDays)->filter(fn($day) => $day['isCurrentMonth']);
+            @endphp
+            @foreach($currentMonthDays as $day)
+                @if($day['hasScheduledWorkout'] || ($day['isRestDay'] ?? false))
+                    <div class="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 {{ $day['isToday'] ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700' : 'bg-white dark:bg-neutral-900' }}">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-3">
+                                <div class="flex flex-col items-center">
+                                    <span class="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase">
+                                        {{ $day['date']->format('D') }}
+                                    </span>
+                                    <span class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                                        {{ $day['date']->format('j') }}
+                                    </span>
+                                </div>
+                                <div class="flex-1">
+                                    @if($day['isRestDay'] ?? false)
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-3 h-3 rounded-full bg-gray-400"></span>
+                                            <span class="text-base font-medium text-zinc-600 dark:text-zinc-400 italic">
+                                                {{ __('Rest Day') }}
+                                            </span>
+                                        </div>
+                                    @elseif($day['hasScheduledWorkout'])
+                                        <h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                                            {{ $day['scheduledWorkout']['active_program']->program->name }}
+                                        </h3>
+                                        <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                                            Week {{ $day['scheduledWorkout']['week'] }}, Day {{ $day['scheduledWorkout']['day'] }}
+                                        </p>
+                                    @endif
+                                </div>
+                            </div>
+                            @if($day['hasLoggedWorkout'])
+                                <span class="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" title="Workout logged"></span>
+                            @elseif($day['hasScheduledWorkout'])
+                                <span class="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" title="Scheduled workout"></span>
+                            @endif
+                        </div>
+                        
+                        @if($day['hasScheduledWorkout'] && $day['isCurrentMonth'])
+                            <div class="mt-3">
+                                @if($day['hasLoggedWorkout'])
+                                    <flux:button 
+                                        href="{{ route('workouts.log', ['activeProgram' => $day['scheduledWorkout']['active_program']->id, 'date' => $day['date']->format('Y-m-d')]) }}" 
+                                        variant="ghost" 
+                                        size="sm"
+                                        class="w-full"
+                                        wire:navigate
+                                    >
+                                        {{ __('View/Edit Workout') }}
+                                    </flux:button>
+                                @else
+                                    <flux:button 
+                                        href="{{ route('workouts.log', ['activeProgram' => $day['scheduledWorkout']['active_program']->id, 'date' => $day['date']->format('Y-m-d')]) }}" 
+                                        variant="primary" 
+                                        size="sm"
+                                        class="w-full"
+                                        wire:navigate
+                                    >
+                                        {{ __('Log Workout') }}
+                                    </flux:button>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+                @endif
+            @endforeach
+            
+            @if($currentMonthDays->filter(fn($day) => $day['hasScheduledWorkout'] || ($day['isRestDay'] ?? false))->isEmpty())
+                <div class="rounded-lg border border-neutral-200 dark:border-neutral-700 p-8 text-center bg-white dark:bg-neutral-900">
+                    <p class="text-zinc-600 dark:text-zinc-400">
+                        {{ __('No workouts scheduled for this month.') }}
+                    </p>
+                </div>
+            @endif
+        </div>
+
+        <!-- Desktop Calendar Grid -->
+        <div class="hidden md:block rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
             <!-- Day Headers -->
             <div class="grid grid-cols-7 bg-neutral-50 dark:bg-neutral-800">
                 @foreach(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $day)
