@@ -103,8 +103,8 @@ new class extends Component {
         // Build calendar
         $startOfMonth = Carbon::parse($this->currentMonth . '-01');
         $endOfMonth = $startOfMonth->copy()->endOfMonth();
-        $startOfCalendar = $startOfMonth->copy()->startOfWeek();
-        $endOfCalendar = $endOfMonth->copy()->endOfWeek();
+        $startOfCalendar = $startOfMonth->copy()->startOfWeek(Carbon::SUNDAY);
+        $endOfCalendar = $endOfMonth->copy()->endOfWeek(Carbon::SUNDAY);
 
         $calendarDays = [];
         $currentDay = $startOfCalendar->copy();
