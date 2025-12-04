@@ -236,7 +236,7 @@ new class extends Component {
                                 @if ($todayStatus && !$todayStatus['isLogged'])
                                     {{-- Today has workout and it's not logged yet --}}
                                     <flux:button
-                                        href="{{ route('workouts.log', ['activeProgram' => $firstActiveProgram->id, 'date' => now()->setTimezone(auth()->user()->getTimezone())->format('Y-m-d')]) }}"
+                                        href="{{ route('workouts.log', ['activeProgram' => $firstActiveProgram->id, 'date' => now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('Y-m-d')]) }}"
                                         variant="primary" size="sm" wire:navigate>
                                         {{ __('Log Workout') }}
                                     </flux:button>

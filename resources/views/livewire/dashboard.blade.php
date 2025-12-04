@@ -56,7 +56,7 @@ new class extends Component {
                     <span class="hidden sm:inline text-zinc-400 dark:text-zinc-500">•</span>
                     <div class="flex items-center justify-center lg:justify-start gap-2 text-sm text-zinc-600 dark:text-zinc-400"
                         x-data="{
-                            timezone: '{{ auth()->user()->getTimezone() }}',
+                            timezone: '{{ auth()->user()?->getTimezone() ?? 'UTC' }}',
                             updateTime() {
                                 const now = new Date();
                                 const formatter = new Intl.DateTimeFormat('en-US', {
@@ -85,8 +85,9 @@ new class extends Component {
                             }
                         }">
                         <span class="font-medium"
-                            data-date>{{ now()->setTimezone(auth()->user()->getTimezone())->format('M d, Y') }}</span>
-                        <span data-time>{{ now()->setTimezone(auth()->user()->getTimezone())->format('g:i A') }}</span>
+                            data-date>{{ now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('M d, Y') }}</span>
+                        <span
+                            data-time>{{ now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('g:i A') }}</span>
                     </div>
                 </div>
             </div>
@@ -180,7 +181,7 @@ new class extends Component {
                             </flux:button>
                             @if ($todayStatus && !$todayStatus['isLogged'])
                                 <flux:button
-                                    href="{{ route('workouts.log', ['activeProgram' => $activeProgram->id,'date' => now()->setTimezone(auth()->user()->getTimezone())->format('Y-m-d')]) }}"
+                                    href="{{ route('workouts.log', ['activeProgram' => $activeProgram->id,'date' => now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('Y-m-d')]) }}"
                                     variant="primary" size="sm" wire:navigate class="flex-1 sm:flex-none min-w-0">
                                     {{ __('Log Workout') }}
                                 </flux:button>

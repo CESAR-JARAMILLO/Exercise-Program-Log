@@ -28,7 +28,7 @@
             @auth
                 <div class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 me-4 max-lg:hidden" 
                      x-data="{ 
-                         timezone: '{{ auth()->user()->getTimezone() }}',
+                         timezone: '{{ auth()->user()?->getTimezone() ?? 'UTC' }}',
                          updateTime() {
                              const now = new Date();
                              const formatter = new Intl.DateTimeFormat('en-US', {
@@ -56,9 +56,9 @@
                              setInterval(() => this.updateTime(), 1000);
                          }
                      }">
-                    <span class="font-medium" data-date>{{ now()->setTimezone(auth()->user()->getTimezone())->format('M d, Y') }}</span>
+                    <span class="font-medium" data-date>{{ now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('M d, Y') }}</span>
                     <span class="text-zinc-500 dark:text-zinc-400">•</span>
-                    <span data-time>{{ now()->setTimezone(auth()->user()->getTimezone())->format('g:i A') }}</span>
+                    <span data-time>{{ now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('g:i A') }}</span>
                 </div>
             @endauth
 
