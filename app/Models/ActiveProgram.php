@@ -114,7 +114,9 @@ class ActiveProgram extends Model
 
     // Get today's scheduled workout or next scheduled workout
     public function getTodayOrNextWorkout(): ?array {
-        $today = Carbon::today();
+        // Use user's timezone to determine "today"
+        $userTimezone = $this->user->getTimezone();
+        $today = Carbon::today($userTimezone);
         $scheduledDates = $this->getScheduledDates();
         
         // First, try to find today's workout
@@ -139,7 +141,9 @@ class ActiveProgram extends Model
 
     // Check if today has a workout and if it's logged (excluding rest days)
     public function getTodayWorkoutStatus(): ?array {
-        $today = Carbon::today();
+        // Use user's timezone to determine "today"
+        $userTimezone = $this->user->getTimezone();
+        $today = Carbon::today($userTimezone);
         
         // Check if today is a rest day
         if ($this->isRestDay($today)) {

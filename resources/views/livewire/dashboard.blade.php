@@ -180,7 +180,7 @@ new class extends Component {
                             </flux:button>
                             @if ($todayStatus && !$todayStatus['isLogged'])
                                 <flux:button
-                                    href="{{ route('workouts.log', ['activeProgram' => $activeProgram->id, 'date' => now()->format('Y-m-d')]) }}"
+                                    href="{{ route('workouts.log', ['activeProgram' => $activeProgram->id,'date' => now()->setTimezone(auth()->user()->getTimezone())->format('Y-m-d')]) }}"
                                     variant="primary" size="sm" wire:navigate class="flex-1 sm:flex-none min-w-0">
                                     {{ __('Log Workout') }}
                                 </flux:button>
