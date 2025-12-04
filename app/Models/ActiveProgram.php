@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class ActiveProgram extends Model
@@ -115,7 +116,7 @@ class ActiveProgram extends Model
     // Get today's scheduled workout or next scheduled workout
     public function getTodayOrNextWorkout(): ?array {
         // Use user's timezone to determine "today"
-        $userTimezone = $this->user->getTimezone();
+        $userTimezone = Auth::user()?->getTimezone() ?? 'UTC';
         $today = Carbon::today($userTimezone);
         $scheduledDates = $this->getScheduledDates();
         
@@ -142,7 +143,7 @@ class ActiveProgram extends Model
     // Check if today has a workout and if it's logged (excluding rest days)
     public function getTodayWorkoutStatus(): ?array {
         // Use user's timezone to determine "today"
-        $userTimezone = $this->user->getTimezone();
+        $userTimezone = Auth::user()?->getTimezone() ?? 'UTC';
         $today = Carbon::today($userTimezone);
         
         // Check if today is a rest day
