@@ -37,10 +37,10 @@ new class extends Component {
     protected function loadDraft(): void
     {
         $draft = ProgramDraft::where('user_id', Auth::id())->first();
-        
+
         if ($draft && $draft->draft_data) {
             $data = $draft->draft_data;
-            
+
             $this->name = $data['name'] ?? '';
             $this->description = $data['description'] ?? '';
             $this->length_weeks = $data['length_weeks'] ?? 0;
@@ -48,10 +48,10 @@ new class extends Component {
             $this->exercises = $data['exercises'] ?? [];
             $this->restDays = $data['restDays'] ?? [];
             $this->expandedWeeks = $data['expandedWeeks'] ?? [];
-            
+
             $this->hasDraft = true;
             $this->lastSavedAt = $draft->last_saved_at->diffForHumans();
-            
+
             // Initialize weeks if needed
             if ($this->length_weeks > 0 && empty($this->exercises)) {
                 $this->initializeWeeks();
@@ -81,7 +81,7 @@ new class extends Component {
             [
                 'draft_data' => $draftData,
                 'last_saved_at' => now(),
-            ]
+            ],
         );
 
         $this->hasDraft = true;
@@ -93,7 +93,7 @@ new class extends Component {
         ProgramDraft::where('user_id', Auth::id())->delete();
         $this->hasDraft = false;
         $this->lastSavedAt = null;
-        
+
         // Reset form
         $this->name = '';
         $this->description = '';
@@ -106,8 +106,56 @@ new class extends Component {
 
     public function updatedLengthWeeks($value): void
     {
-        // Reinitialize when weeks change
-        $this->initializeWeeks();
+        $newLength = (int) $value;
+        $currentLength = count($this->exercises);
+
+        if ($newLength <= 0) {
+            // If set to 0 or less, clear everything
+            $this->exercises = [];
+            $this->restDays = [];
+            $this->expandedWeeks = [];
+            return;
+        }
+
+        // If increasing weeks, add empty days for new weeks only
+        if ($newLength > $currentLength) {
+            for ($week = $currentLength + 1; $week <= $newLength; $week++) {
+                $this->exercises[$week] = [];
+                $this->restDays[$week] = [];
+                for ($day = 1; $day <= 7; $day++) {
+                    $this->exercises[$week][$day] = [];
+                    $this->restDays[$week][$day] = false;
+                }
+                // Expand new weeks by default
+                $this->expandedWeeks[$week] = true;
+            }
+        } else {
+            // If decreasing weeks, remove excess weeks (but preserve existing data)
+            for ($week = $newLength + 1; $week <= $currentLength; $week++) {
+                unset($this->exercises[$week]);
+                unset($this->restDays[$week]);
+                unset($this->expandedWeeks[$week]);
+            }
+        }
+
+        // Ensure all weeks up to newLength have proper structure
+        for ($week = 1; $week <= $newLength; $week++) {
+            if (!isset($this->exercises[$week])) {
+                $this->exercises[$week] = [];
+            }
+            for ($day = 1; $day <= 7; $day++) {
+                if (!isset($this->exercises[$week][$day])) {
+                    $this->exercises[$week][$day] = [];
+                }
+                if (!isset($this->restDays[$week][$day])) {
+                    $this->restDays[$week][$day] = false;
+                }
+            }
+            if (!isset($this->expandedWeeks[$week])) {
+                $this->expandedWeeks[$week] = true;
+            }
+        }
+
         $this->scheduleAutoSave();
     }
 
@@ -150,15 +198,23 @@ new class extends Component {
 
     protected function initializeWeeks(): void
     {
-        $this->exercises = [];
-        $this->restDays = [];
-        for ($week = 1; $week <= $this->length_weeks; $week++) {
-            for ($day = 1; $day <= 7; $day++) {
-                $this->exercises[$week][$day] = [];
-                $this->restDays[$week][$day] = false;
+        // Only initialize if exercises array is empty
+        if (empty($this->exercises)) {
+            $this->exercises = [];
+            $this->restDays = [];
+            for ($week = 1; $week <= $this->length_weeks; $week++) {
+                $this->exercises[$week] = [];
+                $this->restDays[$week] = [];
+                for ($day = 1; $day <= 7; $day++) {
+                    $this->exercises[$week][$day] = [];
+                    $this->restDays[$week][$day] = false;
+                }
+                // Expand all weeks by default
+                $this->expandedWeeks[$week] = true;
             }
-            // Expand all weeks by default
-            $this->expandedWeeks[$week] = true;
+        } else {
+            // If exercises exist, use updatedLengthWeeks logic to adjust
+            $this->updatedLengthWeeks($this->length_weeks);
         }
     }
 
@@ -433,23 +489,22 @@ new class extends Component {
                         'updated_at' => now(),
                     ];
                 }
-                
+
                 if (!empty($weeksToInsert)) {
                     DB::table('program_weeks')->insert($weeksToInsert);
                 }
 
-                // Get inserted weeks
-                $insertedWeeks = DB::table('program_weeks')
-                    ->where('program_id', $program->id)
-                    ->orderBy('week_number')
-                    ->get()
-                    ->keyBy('week_number');
+                // Get inserted weeks - create both keyed collections for efficient lookup
+                $insertedWeeksCollection = DB::table('program_weeks')->where('program_id', $program->id)->orderBy('week_number')->get();
+
+                $weeksById = $insertedWeeksCollection->keyBy('id');
+                $insertedWeeks = $insertedWeeksCollection->keyBy('week_number');
 
                 // Bulk insert days
                 $daysToInsert = [];
                 foreach ($this->exercises as $weekNum => $days) {
                     $programWeek = $insertedWeeks[$weekNum];
-                    
+
                     foreach ($days as $dayNum => $dayExercises) {
                         // Check if day has any exercises with names
                         $hasExercises = false;
@@ -459,7 +514,7 @@ new class extends Component {
                                 break;
                             }
                         }
-                        
+
                         $isRestDay = $this->restDays[$weekNum][$dayNum] ?? false;
                         if (!$hasExercises) {
                             $isRestDay = true;
@@ -475,22 +530,29 @@ new class extends Component {
                         ];
                     }
                 }
-                
+
                 if (!empty($daysToInsert)) {
                     DB::table('program_days')->insert($daysToInsert);
                 }
 
                 // Get inserted days
-                $insertedDays = DB::table('program_days')
-                    ->whereIn('program_week_id', $insertedWeeks->pluck('id'))
-                    ->orderBy('program_week_id')
-                    ->orderBy('day_number')
-                    ->get();
+                $insertedDays = DB::table('program_days')->whereIn('program_week_id', $insertedWeeks->pluck('id'))->orderBy('program_week_id')->orderBy('day_number')->get();
 
                 // Create day map: [week_number][day_number] => day_id
                 $dayMap = [];
                 foreach ($insertedDays as $day) {
-                    $weekNum = $insertedWeeks->where('id', $day->program_week_id)->first()->week_number;
+                    // Use weeksById for efficient lookup by id, with null check for defensive programming
+                    $week = $weeksById->get($day->program_week_id);
+                    if (!$week) {
+                        // Log error and skip this day if week not found (shouldn't happen in normal operation)
+                        \Log::warning('Program creation: Day references non-existent week', [
+                            'day_id' => $day->id,
+                            'program_week_id' => $day->program_week_id,
+                            'program_id' => $program->id,
+                        ]);
+                        continue;
+                    }
+                    $weekNum = $week->week_number;
                     $dayMap[$weekNum][$day->day_number] = $day->id;
                 }
 
@@ -547,14 +609,13 @@ new class extends Component {
 
             session()->flash('success', __('Program created successfully!'));
             $this->redirect(route('programs.show', Program::where('user_id', Auth::id())->latest()->first()));
-            
         } catch (\Exception $e) {
             \Log::error('Program creation failed', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             $this->addError('general', __('An error occurred while creating the program. Your draft has been saved. Please try again.'));
         }
     }
@@ -586,18 +647,16 @@ new class extends Component {
         </div>
     @endif
 
-    @if($hasDraft)
-        <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
+    @if ($hasDraft)
+        <div
+            class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
             <div class="flex items-center justify-between">
                 <div>
                     <strong>{{ __('Draft saved') }}</strong>
                     <span class="ml-2">{{ __('Last saved :time', ['time' => $lastSavedAt]) }}</span>
                 </div>
-                <button 
-                    wire:click="discardDraft" 
-                    type="button"
-                    class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 underline"
-                >
+                <button wire:click="discardDraft" type="button"
+                    class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 underline">
                     {{ __('Discard draft') }}
                 </button>
             </div>
@@ -693,8 +752,10 @@ new class extends Component {
                                     @foreach ($days as $dayNum => $dayExercises)
                                         <div
                                             class="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 bg-neutral-50 dark:bg-neutral-800/50">
-                                            <div class="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                                <div class="flex flex-col items-center sm:items-start text-center sm:text-left">
+                                            <div
+                                                class="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                <div
+                                                    class="flex flex-col items-center sm:items-start text-center sm:text-left">
                                                     <h4 class="font-medium text-zinc-900 dark:text-zinc-100">
                                                         {{ __('Day :number', ['number' => $dayNum]) }}
                                                     </h4>
@@ -706,7 +767,8 @@ new class extends Component {
                                                             );
                                                     @endphp
                                                     @if (!$hasExercises)
-                                                        <span class="text-xs text-zinc-500 dark:text-zinc-400 italic mt-1">
+                                                        <span
+                                                            class="text-xs text-zinc-500 dark:text-zinc-400 italic mt-1">
                                                             {{ __('(Rest Day - No exercises)') }}
                                                         </span>
                                                     @else
@@ -719,7 +781,8 @@ new class extends Component {
                                                         </label>
                                                     @endif
                                                 </div>
-                                                <div class="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
+                                                <div
+                                                    class="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
                                                     <flux:button type="button"
                                                         wire:click="addExercise({{ $weekNum }}, {{ $dayNum }})"
                                                         variant="ghost" size="sm">
@@ -943,20 +1006,20 @@ new class extends Component {
 </section>
 
 @script
-<script>
-    let autoSaveTimeout;
-    
-    // Debounced auto-save (2 seconds after last change)
-    $wire.on('schedule-autosave', () => {
-        clearTimeout(autoSaveTimeout);
-        autoSaveTimeout = setTimeout(() => {
-            $wire.call('autoSave');
-        }, 2000); // 2 seconds debounce
-    });
+    <script>
+        let autoSaveTimeout;
 
-    // Also auto-save every 60 seconds as backup
-    setInterval(() => {
-        $wire.call('autoSave');
-    }, 60000);
-</script>
+        // Debounced auto-save (2 seconds after last change)
+        $wire.on('schedule-autosave', () => {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                $wire.call('autoSave');
+            }, 2000); // 2 seconds debounce
+        });
+
+        // Also auto-save every 60 seconds as backup
+        setInterval(() => {
+            $wire.call('autoSave');
+        }, 60000);
+    </script>
 @endscript
