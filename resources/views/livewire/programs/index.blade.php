@@ -74,6 +74,20 @@ new class extends Component {
     {
         // Ensure user can delete this program (only owner/trainer can delete)
         abort_unless($program->canBeDeletedBy(Auth::user()), 403);
+        
+        // Check if program has active instances
+        $hasActivePrograms = $program->activePrograms()->where('status', 'active')->exists();
+        if ($hasActivePrograms) {
+            session()->flash('error', __('Cannot delete program: There are active instances of this program. Please stop all active instances first.'));
+            return;
+        }
+        
+        // Check if program has assignments
+        $hasAssignments = $program->assignments()->exists();
+        if ($hasAssignments) {
+            session()->flash('error', __('Cannot delete program: This program has been assigned to clients. Please unassign it first.'));
+            return;
+        }
 
         $program->delete();
 
@@ -175,15 +189,15 @@ new class extends Component {
                                         </span>
                                     @endif
                                 @endif
-                                @if ($program->isTemplate())
-                                    <span
-                                        class="rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-1 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                                        {{ __('Template') }}
-                                    </span>
-                                @elseif($program->isActive())
+                                @if ($program->activePrograms->isNotEmpty())
                                     <span
                                         class="rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300">
                                         {{ __('Active') }}
+                                    </span>
+                                @else
+                                    <span
+                                        class="rounded-full bg-neutral-100 dark:bg-neutral-800 px-2 py-1 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                                        {{ __('Template') }}
                                     </span>
                                 @endif
                             </div>
@@ -202,17 +216,20 @@ new class extends Component {
                                 <span class="ml-2">{{ $program->length_weeks }} {{ __('Weeks') }}</span>
                             </div>
                         @endif
-                        @if ($program->isActive() && $program->start_date)
+                        @if ($program->activePrograms->isNotEmpty())
+                            @php
+                                $firstActiveProgram = $program->activePrograms->first();
+                            @endphp
                             <div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
                                 <span class="font-medium">{{ __('Started:') }}</span>
-                                <span class="ml-2">{{ $program->start_date->format('M d, Y') }}</span>
+                                <span class="ml-2">{{ $firstActiveProgram->started_at->format('M d, Y') }}</span>
                             </div>
-                        @endif
-                        @if ($program->activePrograms->isNotEmpty())
-                            <div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
-                                <span class="font-medium">{{ __('Active Instances:') }}</span>
-                                <span class="ml-2">{{ $program->activePrograms->count() }}</span>
-                            </div>
+                            @if ($program->activePrograms->count() > 1)
+                                <div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
+                                    <span class="font-medium">{{ __('Active Instances:') }}</span>
+                                    <span class="ml-2">{{ $program->activePrograms->count() }}</span>
+                                </div>
+                            @endif
                         @endif
                     </div>
 

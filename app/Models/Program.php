@@ -87,6 +87,8 @@ class Program extends Model
         }
 
         // Create active program instance
+        // Note: Program status remains 'template' so multiple users can start the same program
+        // Each user gets their own ActiveProgram instance to track individual progress
         $activeProgram = ActiveProgram::create([
             'user_id' => $userId,
             'program_id' => $this->id,
@@ -96,12 +98,8 @@ class Program extends Model
             'status' => 'active',
         ]);
 
-        // Update program status and dates
-        $this->update([
-            'status' => 'active',
-            'start_date' => $startDate,
-            'end_date' => $startDate->copy()->addWeeks($this->length_weeks),
-        ]);
+        // Don't update program status - keep it as 'template' so other users can start it too
+        // The program dates are not updated either, as they're user-specific in ActiveProgram
 
         return $activeProgram;
     }

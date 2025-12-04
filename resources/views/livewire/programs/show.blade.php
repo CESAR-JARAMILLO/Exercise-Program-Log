@@ -91,6 +91,21 @@ new class extends Component {
         $programId = request()->route('program');
         $program = $programId instanceof Program ? $programId : Program::findOrFail($programId);
         abort_unless($program->canBeDeletedBy(Auth::user()), 403);
+        
+        // Check if program has active instances
+        $hasActivePrograms = $program->activePrograms()->where('status', 'active')->exists();
+        if ($hasActivePrograms) {
+            session()->flash('error', __('Cannot delete program: There are active instances of this program. Please stop all active instances first.'));
+            return;
+        }
+        
+        // Check if program has assignments
+        $hasAssignments = $program->assignments()->exists();
+        if ($hasAssignments) {
+            session()->flash('error', __('Cannot delete program: This program has been assigned to clients. Please unassign it first.'));
+            return;
+        }
+        
         $program->delete();
         session()->flash('success', __('Program deleted successfully.'));
         $this->redirect(route('programs.index'));
@@ -245,24 +260,25 @@ new class extends Component {
                 </p>
             </div>
 
-            @if ($program->start_date)
+            @if ($program->activePrograms->isNotEmpty())
+                @php
+                    $firstActiveProgram = $program->activePrograms->first();
+                    $endDate = $firstActiveProgram->started_at->copy()->addWeeks($program->length_weeks);
+                @endphp
                 <div>
                     <p class="text-sm font-medium text-zinc-600 dark:text-zinc-400">
                         {{ __('Start Date') }}
                     </p>
                     <p class="mt-1 text-zinc-900 dark:text-zinc-100">
-                        {{ $program->start_date->format('M d, Y') }}
+                        {{ $firstActiveProgram->started_at->format('M d, Y') }}
                     </p>
                 </div>
-            @endif
-
-            @if ($program->end_date)
                 <div>
                     <p class="text-sm font-medium text-zinc-600 dark:text-zinc-400">
                         {{ __('End Date') }}
                     </p>
                     <p class="mt-1 text-zinc-900 dark:text-zinc-100">
-                        {{ $program->end_date->format('M d, Y') }}
+                        {{ $endDate->format('M d, Y') }}
                     </p>
                 </div>
             @endif

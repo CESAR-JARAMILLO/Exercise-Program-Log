@@ -222,19 +222,8 @@ class ActiveProgram extends Model
             'stopped_at' => now(),
         ]);
 
-        // Check if this program has any other active instances
-        $hasOtherActiveInstances = ActiveProgram::where('program_id', $this->program_id)
-            ->where('user_id', $this->user_id)
-            ->where('id', '!=', $this->id)
-            ->where('status', 'active')
-            ->exists();
-
-        // If no other active instances, set program status back to template
-        if (!$hasOtherActiveInstances) {
-            $this->program->update([
-                'status' => 'template',
-            ]);
-        }
+        // Note: Program status remains 'template' so multiple users can have instances
+        // No need to update program status - it should always stay as 'template'
     }
 
     // Check if program is stopped
@@ -267,6 +256,8 @@ class ActiveProgram extends Model
         }
 
         // Create new active program instance
+        // Note: Program status remains 'template' so multiple users can restart the same program
+        // Each user gets their own ActiveProgram instance to track individual progress
         $newActiveProgram = ActiveProgram::create([
             'user_id' => $this->user_id,
             'program_id' => $this->program_id,
@@ -276,12 +267,8 @@ class ActiveProgram extends Model
             'status' => 'active',
         ]);
 
-        // Update program status to active
-        $this->program->update([
-            'status' => 'active',
-            'start_date' => $startDate,
-            'end_date' => $startDate->copy()->addWeeks($this->program->length_weeks),
-        ]);
+        // Don't update program status - keep it as 'template' so other users can restart it too
+        // The program dates are not updated either, as they're user-specific in ActiveProgram
 
         return $newActiveProgram;
     }

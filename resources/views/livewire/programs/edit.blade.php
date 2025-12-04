@@ -13,8 +13,7 @@ new class extends Component {
     public string $name = '';
     public string $description = '';
     public int $length_weeks = 0;
-    public ?string $start_date = null;
-    public ?string $end_date = null;
+    // Note: start_date and end_date removed - they're user-specific (stored in ActiveProgram)
     public ?string $notes = null;
 
     // Nested structure: exercises[week][day][exercise_index] = [...]
@@ -54,8 +53,7 @@ new class extends Component {
             $this->name = $program->name;
             $this->description = $program->description ?? '';
             $this->length_weeks = $program->length_weeks;
-            $this->start_date = $program->start_date ? date('Y-m-d', strtotime($program->start_date)) : null;
-            $this->end_date = $program->end_date ? date('Y-m-d', strtotime($program->end_date)) : null;
+            // Note: start_date and end_date are not set here as they're user-specific (stored in ActiveProgram)
             $this->notes = $program->notes ?? '';
             
             // Pre-populate exercises structure
@@ -326,8 +324,7 @@ new class extends Component {
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'length_weeks' => ['required', 'integer', 'min:1', 'max:52'],
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after:start_date'],
+            // Note: start_date and end_date are not validated as they're user-specific (stored in ActiveProgram)
             'notes' => ['nullable', 'string'],
             'exercises' => ['required', 'array'],
         ]);
@@ -341,11 +338,39 @@ new class extends Component {
                             "exercises.{$weekNum}.{$dayNum}.{$index}.name" => ['required', 'string', 'max:255'],
                             "exercises.{$weekNum}.{$dayNum}.{$index}.type" => ['required', 'string', 'max:255'],
                             "exercises.{$weekNum}.{$dayNum}.{$index}.sets" => ['nullable', 'integer', 'min:1'],
+                            "exercises.{$weekNum}.{$dayNum}.{$index}.sets_min" => ['nullable', 'integer', 'min:1'],
+                            "exercises.{$weekNum}.{$dayNum}.{$index}.sets_max" => ['nullable', 'integer', 'min:1'],
                             "exercises.{$weekNum}.{$dayNum}.{$index}.reps" => ['nullable', 'integer', 'min:1'],
+                            "exercises.{$weekNum}.{$dayNum}.{$index}.reps_min" => ['nullable', 'integer', 'min:1'],
+                            "exercises.{$weekNum}.{$dayNum}.{$index}.reps_max" => ['nullable', 'integer', 'min:1'],
                             "exercises.{$weekNum}.{$dayNum}.{$index}.weight" => ['nullable', 'numeric', 'min:0'],
+                            "exercises.{$weekNum}.{$dayNum}.{$index}.weight_min" => ['nullable', 'numeric', 'min:0'],
+                            "exercises.{$weekNum}.{$dayNum}.{$index}.weight_max" => ['nullable', 'numeric', 'min:0'],
                             "exercises.{$weekNum}.{$dayNum}.{$index}.distance" => ['nullable', 'numeric', 'min:0'],
+                            "exercises.{$weekNum}.{$dayNum}.{$index}.distance_min" => ['nullable', 'numeric', 'min:0'],
+                            "exercises.{$weekNum}.{$dayNum}.{$index}.distance_max" => ['nullable', 'numeric', 'min:0'],
                             "exercises.{$weekNum}.{$dayNum}.{$index}.time_seconds" => ['nullable', 'integer', 'min:0'],
+                            "exercises.{$weekNum}.{$dayNum}.{$index}.time_seconds_min" => ['nullable', 'integer', 'min:0'],
+                            "exercises.{$weekNum}.{$dayNum}.{$index}.time_seconds_max" => ['nullable', 'integer', 'min:0'],
                         ]);
+
+                        // Validate that max >= min for ranges
+                        $exercise = $this->exercises[$weekNum][$dayNum][$index];
+                        if (isset($exercise['sets_min']) && isset($exercise['sets_max']) && $exercise['sets_max'] < $exercise['sets_min']) {
+                            $this->addError("exercises.{$weekNum}.{$dayNum}.{$index}.sets_max", 'Sets max must be greater than or equal to sets min.');
+                        }
+                        if (isset($exercise['reps_min']) && isset($exercise['reps_max']) && $exercise['reps_max'] < $exercise['reps_min']) {
+                            $this->addError("exercises.{$weekNum}.{$dayNum}.{$index}.reps_max", 'Reps max must be greater than or equal to reps min.');
+                        }
+                        if (isset($exercise['weight_min']) && isset($exercise['weight_max']) && $exercise['weight_max'] < $exercise['weight_min']) {
+                            $this->addError("exercises.{$weekNum}.{$dayNum}.{$index}.weight_max", 'Weight max must be greater than or equal to weight min.');
+                        }
+                        if (isset($exercise['distance_min']) && isset($exercise['distance_max']) && $exercise['distance_max'] < $exercise['distance_min']) {
+                            $this->addError("exercises.{$weekNum}.{$dayNum}.{$index}.distance_max", 'Distance max must be greater than or equal to distance min.');
+                        }
+                        if (isset($exercise['time_seconds_min']) && isset($exercise['time_seconds_max']) && $exercise['time_seconds_max'] < $exercise['time_seconds_min']) {
+                            $this->addError("exercises.{$weekNum}.{$dayNum}.{$index}.time_seconds_max", 'Time max must be greater than or equal to time min.');
+                        }
                     }
                 }
             }
@@ -356,12 +381,11 @@ new class extends Component {
 
         DB::transaction(function () use ($validated, $program) {
             // Update program
+            // Note: start_date and end_date are not updated as they're user-specific (stored in ActiveProgram)
             $program->update([
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'length_weeks' => $validated['length_weeks'],
-                'start_date' => $validated['start_date'] ?? null,
-                'end_date' => $validated['end_date'] ?? null,
                 'notes' => $validated['notes'] ?? null,
             ]);
 
@@ -549,14 +573,14 @@ new class extends Component {
             <flux:textarea wire:model="description" :label="__('Description')" placeholder="Describe your program..."
                 rows="3" />
 
-            <div class="grid gap-4 md:grid-cols-3">
+            <div class="grid gap-4 md:grid-cols-1">
                 <flux:input wire:model.live="length_weeks" :label="__('Length (weeks)')" type="number" required
                     min="1" max="52" placeholder="Select number of weeks" />
-
-                <flux:input wire:model="start_date" :label="__('Start Date')" type="date" />
-
-                <flux:input wire:model="end_date" :label="__('End Date')" type="date" />
             </div>
+            
+            <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                {{ __('Note: Start and end dates are set when you start the program, not when creating the template.') }}
+            </p>
 
             <flux:textarea wire:model="notes" :label="__('Notes')" placeholder="Additional notes..." rows="2" />
         </div>

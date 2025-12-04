@@ -18,23 +18,25 @@ new class extends Component {
         
         // If program is passed via route, use it
         if ($program) {
-            // Handle both slug and model instance
+            // Handle both model instance and ID
             if ($program instanceof Program) {
                 $programModel = $program;
             } else {
-                $programModel = Program::where('slug', $program)->orWhere('id', $program)->first();
+                // Use findOrFail to throw 404 if program doesn't exist
+                $programModel = Program::findOrFail($program);
             }
             
-            if ($programModel) {
-                // Find the active program for this user
-                $activeProgram = ActiveProgram::where('user_id', Auth::id())
-                    ->where('program_id', $programModel->id)
-                    ->where('status', 'active')
-                    ->first();
-                
-                if ($activeProgram) {
-                    $this->selectedProgramId = (int) $activeProgram->program_id;
-                }
+            // Find the active program for this user
+            $activeProgram = ActiveProgram::where('user_id', Auth::id())
+                ->where('program_id', $programModel->id)
+                ->where('status', 'active')
+                ->first();
+            
+            if ($activeProgram) {
+                $this->selectedProgramId = (int) $activeProgram->program_id;
+            } else {
+                // Program exists but user doesn't have an active instance
+                abort(404, 'No active program instance found for this program.');
             }
         }
         
