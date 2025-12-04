@@ -13,7 +13,7 @@ new class extends Component {
     {
         // Get program ID from route parameter
         $programId = $program ?? request()->route('program');
-        
+
         // Handle both ID and model instance
         if ($programId instanceof Program) {
             $this->programId = $programId->id;
@@ -91,21 +91,21 @@ new class extends Component {
         $programId = request()->route('program');
         $program = $programId instanceof Program ? $programId : Program::findOrFail($programId);
         abort_unless($program->canBeDeletedBy(Auth::user()), 403);
-        
+
         // Check if program has active instances
         $hasActivePrograms = $program->activePrograms()->where('status', 'active')->exists();
         if ($hasActivePrograms) {
             session()->flash('error', __('Cannot delete program: There are active instances of this program. Please stop all active instances first.'));
             return;
         }
-        
+
         // Check if program has assignments
         $hasAssignments = $program->assignments()->exists();
         if ($hasAssignments) {
             session()->flash('error', __('Cannot delete program: This program has been assigned to clients. Please unassign it first.'));
             return;
         }
-        
+
         $program->delete();
         session()->flash('success', __('Program deleted successfully.'));
         $this->redirect(route('programs.index'));
@@ -129,12 +129,14 @@ new class extends Component {
 
     <div class="mb-6 flex flex-col md:flex-row items-center md:items-center md:justify-between gap-4">
         <div class="flex-1 min-w-0 w-full md:w-auto text-center lg:text-left">
-            <div class="flex flex-col sm:flex-row items-center sm:items-center justify-center lg:justify-start gap-2 mb-1">
+            <div
+                class="flex flex-col sm:flex-row items-center sm:items-center justify-center lg:justify-start gap-2 mb-1">
                 <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                     {{ $program->name }}
                 </h1>
                 @if ($isAssigned && $assignedBy)
-                    <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-3 py-1 text-sm font-medium">
+                    <span
+                        class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-3 py-1 text-sm font-medium">
                         {{ __('Assigned by :name', ['name' => $assignedBy->name]) }}
                     </span>
                 @endif
@@ -144,7 +146,7 @@ new class extends Component {
             </p>
         </div>
         <div class="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
-            @if ($user->isTrainer() && $program->isTemplate() && ($program->user_id === $user->id || $program->trainer_id === $user->id))
+            @if ($program->isTemplate() && $program->canBeEditedBy($user) && $user->isTrainer())
                 <flux:button href="{{ route('programs.assign', $program) }}" variant="primary" wire:navigate>
                     {{ __('Assign to Client') }}
                 </flux:button>
@@ -166,7 +168,7 @@ new class extends Component {
                 @if ($todayStatus && !$todayStatus['isLogged'])
                     {{-- Today has workout and it's not logged yet --}}
                     <flux:button
-                        href="{{ route('workouts.log', ['activeProgram' => $firstActiveProgram->id, 'date' => now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('Y-m-d')]) }}"
+                        href="{{ route('workouts.log', ['activeProgram' => $firstActiveProgram->id,'date' => now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('Y-m-d')]) }}"
                         variant="primary" wire:navigate>
                         {{ __('Log Workout') }}
                     </flux:button>
@@ -195,8 +197,9 @@ new class extends Component {
                 </flux:button>
             @endif
             @if ($program->canBeDeletedBy($user))
-                <flux:button wire:click="delete" wire:confirm="{{ __('Are you sure you want to delete this program?') }}"
-                    variant="ghost" class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                <flux:button wire:click="delete"
+                    wire:confirm="{{ __('Are you sure you want to delete this program?') }}" variant="ghost"
+                    class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
                     {{ __('Delete') }}
                 </flux:button>
             @endif
@@ -204,7 +207,7 @@ new class extends Component {
     </div>
 
     <!-- Assigned Clients (for trainers) -->
-    @if ($user->isTrainer() && ($program->user_id === $user->id || $program->trainer_id === $user->id) && $program->assignments->isNotEmpty())
+    @if ($user->isTrainer() && $program->canBeEditedBy($user) && $program->assignments->isNotEmpty())
         <div class="mb-6 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
             <h2 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                 {{ __('Assigned Clients') }}
@@ -213,23 +216,34 @@ new class extends Component {
                 <table class="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700">
                     <thead class="bg-neutral-50 dark:bg-neutral-800">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{{ __('Client Name') }}</th>
-                            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{{ __('Email') }}</th>
-                            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{{ __('Status') }}</th>
-                            <th scope="col" class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{{ __('Assigned At') }}</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                                {{ __('Client Name') }}</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                                {{ __('Email') }}</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                                {{ __('Status') }}</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-start text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                                {{ __('Assigned At') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-neutral-200 dark:divide-neutral-700 bg-white dark:bg-neutral-900">
                         @foreach ($program->assignments as $assignment)
                             <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900 dark:text-neutral-100">{{ $assignment->client->name }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-500 dark:text-neutral-400">{{ $assignment->client->email }}</td>
+                                <td
+                                    class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                                    {{ $assignment->client->name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-500 dark:text-neutral-400">
+                                    {{ $assignment->client->email }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                    <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
-                                        @if($assignment->status === 'assigned') bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300
+                                    <span
+                                        class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+                                        @if ($assignment->status === 'assigned') bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300
                                         @elseif($assignment->status === 'started') bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
-                                        @elseif($assignment->status === 'completed') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
-                                        @endif">
+                                        @elseif($assignment->status === 'completed') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 @endif">
                                         {{ ucfirst($assignment->status) }}
                                     </span>
                                 </td>
@@ -324,12 +338,14 @@ new class extends Component {
                                 @foreach ($week->days->sortBy('day_number') as $day)
                                     <div
                                         class="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 bg-neutral-50 dark:bg-neutral-800/50">
-                                        <h4 class="mb-3 font-medium text-zinc-900 dark:text-zinc-100 text-center md:text-left">
+                                        <h4
+                                            class="mb-3 font-medium text-zinc-900 dark:text-zinc-100 text-center md:text-left">
                                             {{ $day->label ?: __('Day :number', ['number' => $day->day_number]) }}
                                         </h4>
 
                                         @if ($day->exercises->isEmpty())
-                                            <p class="text-sm text-zinc-500 dark:text-zinc-400 italic text-center md:text-left">
+                                            <p
+                                                class="text-sm text-zinc-500 dark:text-zinc-400 italic text-center md:text-left">
                                                 {{ __('No exercises for this day.') }}
                                             </p>
                                         @else
@@ -391,7 +407,8 @@ new class extends Component {
                                                                     <p
                                                                         class="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
                                                                         @if ($exercise->weight_min && $exercise->weight_max)
-                                                                            {{ $exercise->weight_min }}-{{ $exercise->weight_max }} lbs
+                                                                            {{ $exercise->weight_min }}-{{ $exercise->weight_max }}
+                                                                            lbs
                                                                         @else
                                                                             {{ $exercise->weight }} lbs
                                                                         @endif
@@ -408,7 +425,8 @@ new class extends Component {
                                                                     <p
                                                                         class="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
                                                                         @if ($exercise->distance_min && $exercise->distance_max)
-                                                                            {{ $exercise->distance_min }}-{{ $exercise->distance_max }} miles
+                                                                            {{ $exercise->distance_min }}-{{ $exercise->distance_max }}
+                                                                            miles
                                                                         @else
                                                                             {{ $exercise->distance }} miles
                                                                         @endif

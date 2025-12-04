@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ActiveProgram;
 use App\Models\Program;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
@@ -19,6 +20,23 @@ new class extends Component {
                     $query->where('user_id', $user->id)->where('status', 'stopped')->orderBy('stopped_at', 'desc');
                 },
                 'assignments.trainer',
+                'assignments.client', // Load all assignments to count clients
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get programs where user is the trainer (assigned to clients)
+        $trainerPrograms = Program::where('trainer_id', $user->id)
+            ->where('user_id', '!=', $user->id) // Exclude programs already in ownedPrograms
+            ->with([
+                'activePrograms' => function ($query) use ($user) {
+                    $query->where('user_id', $user->id)->where('status', 'active');
+                },
+                'activeProgramsStopped' => function ($query) use ($user) {
+                    $query->where('user_id', $user->id)->where('status', 'stopped')->orderBy('stopped_at', 'desc');
+                },
+                'assignments.trainer',
+                'assignments.client', // Load all assignments to count clients
             ])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -42,9 +60,24 @@ new class extends Component {
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Combine and merge (avoid duplicates if a program is both owned and assigned)
-        $allProgramIds = $ownedPrograms->pluck('id')->merge($assignedPrograms->pluck('id'))->unique();
-        $programs = $ownedPrograms->merge($assignedPrograms)->unique('id');
+        // Combine and merge (avoid duplicates if a program appears in multiple categories)
+        $programs = $ownedPrograms->merge($trainerPrograms)->merge($assignedPrograms)->unique('id');
+        
+        // For each program, load all active programs count (for client count) if user is trainer/owner
+        $programsWithClientCounts = [];
+        foreach ($programs as $program) {
+            // If user is owner or trainer, count all active programs (all clients)
+            if ($program->user_id === $user->id || $program->trainer_id === $user->id) {
+                // Use direct query to get ALL active programs, not just current user's
+                $allActiveCount = ActiveProgram::where('program_id', $program->id)
+                    ->where('status', 'active')
+                    ->count();
+                $programsWithClientCounts[$program->id] = [
+                    'assigned_count' => $program->assignments->count(),
+                    'active_count' => $allActiveCount,
+                ];
+            }
+        }
 
         // Get today's workout status for each active program
         $activeProgramsWithWorkouts = [];
@@ -63,6 +96,7 @@ new class extends Component {
         return [
             'programs' => $programs,
             'activeProgramsWithWorkouts' => $activeProgramsWithWorkouts,
+            'programsWithClientCounts' => $programsWithClientCounts,
             'user' => $user,
             'programCount' => $user->getProgramCount(), // Only counts owned programs
             'maxPrograms' => $user->getMaxPrograms(),
@@ -200,6 +234,20 @@ new class extends Component {
                                         {{ __('Template') }}
                                     </span>
                                 @endif
+                                @php
+                                    // Show client assignment badge for trainers/owners
+                                    $isOwnerOrTrainer = ($program->user_id === Auth::id() || $program->trainer_id === Auth::id());
+                                    $clientCounts = $programsWithClientCounts[$program->id] ?? null;
+                                    $assignedClientsCount = $clientCounts ? $clientCounts['assigned_count'] : 0;
+                                    $activeClientsCount = $clientCounts ? $clientCounts['active_count'] : 0;
+                                @endphp
+                                @if ($isOwnerOrTrainer && $assignedClientsCount > 0)
+                                    <span
+                                        class="rounded-full bg-purple-100 dark:bg-purple-900/30 px-2 py-1 text-xs font-medium text-purple-700 dark:text-purple-300"
+                                        title="{{ __(':active active out of :total assigned clients', ['active' => $activeClientsCount, 'total' => $assignedClientsCount]) }}">
+                                        {{ __(':active/:total Clients', ['active' => $activeClientsCount, 'total' => $assignedClientsCount]) }}
+                                    </span>
+                                @endif
                             </div>
                             @if ($program->description)
                                 <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
@@ -238,47 +286,51 @@ new class extends Component {
                             wire:navigate>
                             {{ __('View') }}
                         </flux:button>
-                        @if ($program->isTemplate())
+                        @if ($program->isTemplate() && $program->canBeEditedBy($user) && $user->isTrainer())
+                            <flux:button href="{{ route('programs.assign', $program) }}" variant="primary"
+                                size="sm" wire:navigate>
+                                {{ __('Assign') }}
+                            </flux:button>
+                        @endif
+                        @if ($program->isTemplate() && $program->activePrograms->isEmpty())
                             <flux:button href="{{ route('programs.start', $program) }}" variant="primary"
                                 size="sm" wire:navigate>
                                 {{ __('Start') }}
                             </flux:button>
-                        @else
-                            @if ($program->activePrograms->isNotEmpty())
-                                @php
-                                    $firstActiveProgram = $program->activePrograms->first();
-                                    $workoutData = $activeProgramsWithWorkouts[$firstActiveProgram->id] ?? null;
-                                    $todayStatus = $workoutData['todayStatus'] ?? null;
-                                @endphp
-                                @if ($todayStatus && !$todayStatus['isLogged'])
-                                    {{-- Today has workout and it's not logged yet --}}
-                                    <flux:button
-                                        href="{{ route('workouts.log', ['activeProgram' => $firstActiveProgram->id, 'date' => now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('Y-m-d')]) }}"
-                                        variant="primary" size="sm" wire:navigate>
-                                        {{ __('Log Workout') }}
-                                    </flux:button>
-                                @else
-                                    {{-- Show calendar button otherwise --}}
-                                    <flux:button href="{{ route('workouts.calendar', $program) }}" variant="primary"
-                                        size="sm" wire:navigate>
-                                        {{ __('Calendar') }}
-                                    </flux:button>
-                                @endif
-                            @elseif($program->activeProgramsStopped->isNotEmpty())
-                                @php
-                                    $lastStoppedProgram = $program->activeProgramsStopped->first();
-                                @endphp
-                                <flux:button href="{{ route('active-programs.restart', $lastStoppedProgram) }}"
+                        @elseif ($program->activePrograms->isNotEmpty())
+                            @php
+                                $firstActiveProgram = $program->activePrograms->first();
+                                $workoutData = $activeProgramsWithWorkouts[$firstActiveProgram->id] ?? null;
+                                $todayStatus = $workoutData['todayStatus'] ?? null;
+                            @endphp
+                            @if ($todayStatus && !$todayStatus['isLogged'])
+                                {{-- Today has workout and it's not logged yet --}}
+                                <flux:button
+                                    href="{{ route('workouts.log', ['activeProgram' => $firstActiveProgram->id, 'date' => now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('Y-m-d')]) }}"
                                     variant="primary" size="sm" wire:navigate>
-                                    {{ __('Restart') }}
+                                    {{ __('Log Workout') }}
+                                </flux:button>
+                            @else
+                                {{-- Show calendar button otherwise --}}
+                                <flux:button href="{{ route('workouts.calendar', $program) }}" variant="primary"
+                                    size="sm" wire:navigate>
+                                    {{ __('Calendar') }}
                                 </flux:button>
                             @endif
-                            @if ($program->canBeEditedBy(Auth::user()))
-                                <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" size="sm"
-                                    wire:navigate>
-                                    {{ __('Edit') }}
-                                </flux:button>
-                            @endif
+                        @elseif($program->activeProgramsStopped->isNotEmpty())
+                            @php
+                                $lastStoppedProgram = $program->activeProgramsStopped->first();
+                            @endphp
+                            <flux:button href="{{ route('active-programs.restart', $lastStoppedProgram) }}"
+                                variant="primary" size="sm" wire:navigate>
+                                {{ __('Restart') }}
+                            </flux:button>
+                        @endif
+                        @if ($program->canBeEditedBy(Auth::user()))
+                            <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" size="sm"
+                                wire:navigate>
+                                {{ __('Edit') }}
+                            </flux:button>
                         @endif
                         @if ($program->canBeDeletedBy(Auth::user()))
                             <flux:button wire:click="delete({{ $program->id }})"
