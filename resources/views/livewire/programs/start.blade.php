@@ -52,9 +52,10 @@ new class extends Component {
 
         // Start the program
         $activeProgram = $program->startForUser(Auth::id(), $validated['start_date']);
+        $program->refresh();
 
         session()->flash('success', __('Program started successfully! You can now log your workouts.'));
-        $this->redirect(route('workouts.calendar'));
+        $this->redirect(route('workouts.calendar', $program));
     }
 }; ?>
 

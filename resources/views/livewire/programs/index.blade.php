@@ -242,7 +242,7 @@ new class extends Component {
                                     </flux:button>
                                 @else
                                     {{-- Show calendar button otherwise --}}
-                                    <flux:button href="{{ route('workouts.calendar') }}" variant="primary"
+                                    <flux:button href="{{ route('workouts.calendar', $program) }}" variant="primary"
                                         size="sm" wire:navigate>
                                         {{ __('Calendar') }}
                                     </flux:button>

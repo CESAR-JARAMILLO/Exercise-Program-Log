@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ActiveProgram;
+use App\Models\Program;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
@@ -8,19 +9,63 @@ use Livewire\Volt\Component;
 new class extends Component {
     public string $currentMonth;
     public string $currentYear;
+    public ?int $selectedProgramId = null;
 
-    public function mount(): void
+    public function mount($program = null): void
     {
         $this->currentMonth = now()->format('Y-m');
         $this->currentYear = now()->format('Y');
+        
+        // If program is passed via route, use it
+        if ($program) {
+            // Handle both slug and model instance
+            if ($program instanceof Program) {
+                $programModel = $program;
+            } else {
+                $programModel = Program::where('slug', $program)->orWhere('id', $program)->first();
+            }
+            
+            if ($programModel) {
+                // Find the active program for this user
+                $activeProgram = ActiveProgram::where('user_id', Auth::id())
+                    ->where('program_id', $programModel->id)
+                    ->where('status', 'active')
+                    ->first();
+                
+                if ($activeProgram) {
+                    $this->selectedProgramId = (int) $activeProgram->program_id;
+                }
+            }
+        }
+        
+        // Set default to first active program if none selected
+        if (!$this->selectedProgramId) {
+            $firstActiveProgram = ActiveProgram::where('user_id', Auth::id())
+                ->where('status', 'active')
+                ->first();
+            if ($firstActiveProgram) {
+                $this->selectedProgramId = (int) $firstActiveProgram->program_id;
+            }
+        }
     }
 
     public function with(): array
     {
-        $activePrograms = ActiveProgram::where('user_id', Auth::id())
+        // Get all active programs for the selector dropdown
+        $allActivePrograms = ActiveProgram::where('user_id', Auth::id())
             ->where('status', 'active')
-            ->with(['program', 'workoutLogs'])
+            ->with('program')
             ->get();
+        
+        // Only show calendar for selected program - require selection
+        $activePrograms = collect();
+        if ($this->selectedProgramId) {
+            $activePrograms = ActiveProgram::where('user_id', Auth::id())
+                ->where('status', 'active')
+                ->where('program_id', $this->selectedProgramId)
+                ->with(['program', 'workoutLogs'])
+                ->get();
+        }
 
         // Get all scheduled dates for the current month
         $scheduledDates = [];
@@ -33,6 +78,7 @@ new class extends Component {
                 if ($date->format('Y-m') === $this->currentMonth) {
                     $scheduledDates[$date->format('Y-m-d')] = [
                         'active_program' => $activeProgram,
+                        'program' => $activeProgram->program, // Store program directly
                         'week' => $scheduled['week'],
                         'day' => $scheduled['day'],
                         'program_day_id' => $scheduled['program_day_id'],
@@ -81,6 +127,7 @@ new class extends Component {
 
         return [
             'activePrograms' => $activePrograms,
+            'allActivePrograms' => $allActivePrograms,
             'calendarDays' => $calendarDays,
             'startOfMonth' => $startOfMonth,
         ];
@@ -104,6 +151,11 @@ new class extends Component {
     {
         $this->currentMonth = now()->format('Y-m');
         $this->currentYear = now()->format('Y');
+    }
+
+    public function updatedSelectedProgramId(): void
+    {
+        // This will automatically trigger a re-render when the selection changes
     }
 }; ?>
 
@@ -133,7 +185,7 @@ new class extends Component {
         </div>
     </div>
 
-    @if($activePrograms->isEmpty())
+    @if($allActivePrograms->isEmpty())
         <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-12 text-center">
             <p class="text-zinc-600 dark:text-zinc-400 mb-4">
                 {{ __('You don\'t have any active programs yet.') }}
@@ -142,7 +194,42 @@ new class extends Component {
                 {{ __('Browse Programs') }}
             </flux:button>
         </div>
+    @elseif(!$selectedProgramId)
+        <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-12 text-center">
+            <p class="text-zinc-600 dark:text-zinc-400 mb-4">
+                {{ __('Please select a program to view its calendar.') }}
+            </p>
+            <div class="max-w-md mx-auto">
+                <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    {{ __('Select Program') }}
+                </label>
+                <select 
+                    wire:model.live="selectedProgramId"
+                    class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                    <option value="">{{ __('Select a program...') }}</option>
+                    @foreach($allActivePrograms as $activeProgram)
+                        <option value="{{ $activeProgram->program_id }}">{{ $activeProgram->program->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
     @else
+        <!-- Program Selector -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                {{ __('Program') }}
+            </label>
+            <select 
+                wire:model.live="selectedProgramId"
+                class="w-full rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500">
+                @foreach($allActivePrograms as $activeProgram)
+                    <option value="{{ (int) $activeProgram->program_id }}" {{ $selectedProgramId == $activeProgram->program_id ? 'selected' : '' }}>
+                        {{ $activeProgram->program->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        
         <!-- Calendar Navigation -->
         <div class="mb-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2 w-full sm:w-auto order-2 sm:order-1">

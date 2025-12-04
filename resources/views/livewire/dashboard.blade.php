@@ -186,8 +186,8 @@ new class extends Component {
                                     {{ __('Log Workout') }}
                                 </flux:button>
                             @else
-                                <flux:button href="{{ route('workouts.calendar') }}" variant="primary" size="sm"
-                                    wire:navigate class="flex-1 sm:flex-none min-w-0">
+                                <flux:button href="{{ route('workouts.calendar', $program) }}" variant="primary"
+                                    size="sm" wire:navigate class="flex-1 sm:flex-none min-w-0">
                                     {{ __('Calendar') }}
                                 </flux:button>
                             @endif

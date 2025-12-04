@@ -192,8 +192,10 @@ new class extends Component {
             $activeProgram->updateProgress();
         });
         
+        // Get program for redirect
+        $activeProgram = ActiveProgram::with('program')->findOrFail($this->activeProgramId);
         session()->flash('success', __('Workout logged successfully!'));
-        $this->redirect(route('workouts.calendar'));
+        $this->redirect(route('workouts.calendar', $activeProgram->program));
     }
 }; ?>
 
