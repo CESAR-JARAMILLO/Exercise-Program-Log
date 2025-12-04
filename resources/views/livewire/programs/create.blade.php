@@ -4,6 +4,7 @@ use App\Models\Program;
 use App\Models\ProgramWeek;
 use App\Models\ProgramDay;
 use App\Models\DayExercise;
+use App\Models\ProgramDraft;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Volt\Component;
@@ -23,10 +24,122 @@ new class extends Component {
     // Track which weeks are expanded
     public array $expandedWeeks = [];
 
+    // Draft tracking
+    public bool $hasDraft = false;
+    public ?string $lastSavedAt = null;
+
+    public function mount(): void
+    {
+        // Load draft if it exists
+        $this->loadDraft();
+    }
+
+    protected function loadDraft(): void
+    {
+        $draft = ProgramDraft::where('user_id', Auth::id())->first();
+        
+        if ($draft && $draft->draft_data) {
+            $data = $draft->draft_data;
+            
+            $this->name = $data['name'] ?? '';
+            $this->description = $data['description'] ?? '';
+            $this->length_weeks = $data['length_weeks'] ?? 0;
+            $this->notes = $data['notes'] ?? null;
+            $this->exercises = $data['exercises'] ?? [];
+            $this->restDays = $data['restDays'] ?? [];
+            $this->expandedWeeks = $data['expandedWeeks'] ?? [];
+            
+            $this->hasDraft = true;
+            $this->lastSavedAt = $draft->last_saved_at->diffForHumans();
+            
+            // Initialize weeks if needed
+            if ($this->length_weeks > 0 && empty($this->exercises)) {
+                $this->initializeWeeks();
+            }
+        }
+    }
+
+    public function autoSave(): void
+    {
+        // Only save if there's actual data
+        if (empty($this->name) && $this->length_weeks === 0) {
+            return;
+        }
+
+        $draftData = [
+            'name' => $this->name,
+            'description' => $this->description,
+            'length_weeks' => $this->length_weeks,
+            'notes' => $this->notes,
+            'exercises' => $this->exercises,
+            'restDays' => $this->restDays,
+            'expandedWeeks' => $this->expandedWeeks,
+        ];
+
+        ProgramDraft::updateOrCreate(
+            ['user_id' => Auth::id()],
+            [
+                'draft_data' => $draftData,
+                'last_saved_at' => now(),
+            ]
+        );
+
+        $this->hasDraft = true;
+        $this->lastSavedAt = now()->diffForHumans();
+    }
+
+    public function discardDraft(): void
+    {
+        ProgramDraft::where('user_id', Auth::id())->delete();
+        $this->hasDraft = false;
+        $this->lastSavedAt = null;
+        
+        // Reset form
+        $this->name = '';
+        $this->description = '';
+        $this->length_weeks = 0;
+        $this->notes = null;
+        $this->exercises = [];
+        $this->restDays = [];
+        $this->expandedWeeks = [];
+    }
+
     public function updatedLengthWeeks($value): void
     {
         // Reinitialize when weeks change
         $this->initializeWeeks();
+        $this->scheduleAutoSave();
+    }
+
+    public function updatedName(): void
+    {
+        $this->scheduleAutoSave();
+    }
+
+    public function updatedDescription(): void
+    {
+        $this->scheduleAutoSave();
+    }
+
+    public function updatedNotes(): void
+    {
+        $this->scheduleAutoSave();
+    }
+
+    public function updatedExercises(): void
+    {
+        $this->scheduleAutoSave();
+    }
+
+    public function updatedRestDays(): void
+    {
+        $this->scheduleAutoSave();
+    }
+
+    protected function scheduleAutoSave(): void
+    {
+        // Dispatch event for JavaScript to handle debouncing
+        $this->dispatch('schedule-autosave');
     }
 
     public function toggleWeek($week): void
@@ -294,80 +407,156 @@ new class extends Component {
             }
         }
 
-        DB::transaction(function () use ($validated, $user) {
-            // Create program as template (no dates, status = template)
-            $program = Program::create([
-                'name' => $validated['name'],
-                'description' => $validated['description'] ?? null,
-                'length_weeks' => $validated['length_weeks'],
-                'notes' => $validated['notes'] ?? null,
-                'status' => 'template',
-                'user_id' => $user->id,
-                'trainer_id' => $user->isTrainer() ? $user->id : null,
-            ]);
+        // Increase execution time limit for large programs
+        set_time_limit(300); // 5 minutes
 
-            // Create weeks, days, and exercises
-            foreach ($this->exercises as $weekNum => $days) {
-                $programWeek = ProgramWeek::create([
-                    'program_id' => $program->id,
-                    'week_number' => $weekNum,
+        try {
+            DB::transaction(function () use ($validated, $user) {
+                // Create program as template (no dates, status = template)
+                $program = Program::create([
+                    'name' => $validated['name'],
+                    'description' => $validated['description'] ?? null,
+                    'length_weeks' => $validated['length_weeks'],
+                    'notes' => $validated['notes'] ?? null,
+                    'status' => 'template',
+                    'user_id' => $user->id,
+                    'trainer_id' => $user->isTrainer() ? $user->id : null,
                 ]);
 
-                foreach ($days as $dayNum => $dayExercises) {
-                    // Check if day has any exercises with names
-                    $hasExercises = false;
-                    foreach ($dayExercises as $exercise) {
-                        if (!empty($exercise['name'])) {
-                            $hasExercises = true;
-                            break;
+                // Bulk insert weeks
+                $weeksToInsert = [];
+                for ($weekNum = 1; $weekNum <= $validated['length_weeks']; $weekNum++) {
+                    $weeksToInsert[] = [
+                        'program_id' => $program->id,
+                        'week_number' => $weekNum,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+                
+                if (!empty($weeksToInsert)) {
+                    DB::table('program_weeks')->insert($weeksToInsert);
+                }
+
+                // Get inserted weeks
+                $insertedWeeks = DB::table('program_weeks')
+                    ->where('program_id', $program->id)
+                    ->orderBy('week_number')
+                    ->get()
+                    ->keyBy('week_number');
+
+                // Bulk insert days
+                $daysToInsert = [];
+                foreach ($this->exercises as $weekNum => $days) {
+                    $programWeek = $insertedWeeks[$weekNum];
+                    
+                    foreach ($days as $dayNum => $dayExercises) {
+                        // Check if day has any exercises with names
+                        $hasExercises = false;
+                        foreach ($dayExercises as $exercise) {
+                            if (!empty($exercise['name'])) {
+                                $hasExercises = true;
+                                break;
+                            }
                         }
+                        
+                        $isRestDay = $this->restDays[$weekNum][$dayNum] ?? false;
+                        if (!$hasExercises) {
+                            $isRestDay = true;
+                        }
+
+                        $daysToInsert[] = [
+                            'program_week_id' => $programWeek->id,
+                            'day_number' => $dayNum,
+                            'label' => "Day $dayNum",
+                            'is_rest_day' => $isRestDay,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
                     }
+                }
+                
+                if (!empty($daysToInsert)) {
+                    DB::table('program_days')->insert($daysToInsert);
+                }
 
-                    // If no exercises, automatically make it a rest day
-                    $isRestDay = $this->restDays[$weekNum][$dayNum] ?? false;
-                    if (!$hasExercises) {
-                        $isRestDay = true;
-                    }
+                // Get inserted days
+                $insertedDays = DB::table('program_days')
+                    ->whereIn('program_week_id', $insertedWeeks->pluck('id'))
+                    ->orderBy('program_week_id')
+                    ->orderBy('day_number')
+                    ->get();
 
-                    $programDay = ProgramDay::create([
-                        'program_week_id' => $programWeek->id,
-                        'day_number' => $dayNum,
-                        'label' => "Day $dayNum",
-                        'is_rest_day' => $isRestDay,
-                    ]);
+                // Create day map: [week_number][day_number] => day_id
+                $dayMap = [];
+                foreach ($insertedDays as $day) {
+                    $weekNum = $insertedWeeks->where('id', $day->program_week_id)->first()->week_number;
+                    $dayMap[$weekNum][$day->day_number] = $day->id;
+                }
 
-                    // Add exercises for this day (only save exercises with names)
-                    foreach ($dayExercises as $order => $exercise) {
-                        if (!empty($exercise['name'])) {
-                            DayExercise::create([
-                                'program_day_id' => $programDay->id,
-                                'name' => $exercise['name'],
-                                'type' => $exercise['type'] ?? 'strength',
-                                'sets' => $exercise['sets'] ?? null,
-                                'sets_min' => $exercise['sets_min'] ?? null,
-                                'sets_max' => $exercise['sets_max'] ?? null,
-                                'reps' => $exercise['reps'] ?? null,
-                                'reps_min' => $exercise['reps_min'] ?? null,
-                                'reps_max' => $exercise['reps_max'] ?? null,
-                                'weight' => $exercise['weight'] ?? null,
-                                'weight_min' => $exercise['weight_min'] ?? null,
-                                'weight_max' => $exercise['weight_max'] ?? null,
-                                'distance' => $exercise['distance'] ?? null,
-                                'distance_min' => $exercise['distance_min'] ?? null,
-                                'distance_max' => $exercise['distance_max'] ?? null,
-                                'time_seconds' => $exercise['time_seconds'] ?? null,
-                                'time_seconds_min' => $exercise['time_seconds_min'] ?? null,
-                                'time_seconds_max' => $exercise['time_seconds_max'] ?? null,
-                                'order' => $order + 1,
-                            ]);
+                // Bulk insert exercises in chunks
+                $exercisesToInsert = [];
+                foreach ($this->exercises as $weekNum => $days) {
+                    foreach ($days as $dayNum => $dayExercises) {
+                        $programDayId = $dayMap[$weekNum][$dayNum] ?? null;
+                        if (!$programDayId) {
+                            continue;
+                        }
+
+                        foreach ($dayExercises as $order => $exercise) {
+                            if (!empty($exercise['name'])) {
+                                $exercisesToInsert[] = [
+                                    'program_day_id' => $programDayId,
+                                    'name' => $exercise['name'],
+                                    'type' => $exercise['type'] ?? 'strength',
+                                    'sets' => $exercise['sets'] ?? null,
+                                    'sets_min' => $exercise['sets_min'] ?? null,
+                                    'sets_max' => $exercise['sets_max'] ?? null,
+                                    'reps' => $exercise['reps'] ?? null,
+                                    'reps_min' => $exercise['reps_min'] ?? null,
+                                    'reps_max' => $exercise['reps_max'] ?? null,
+                                    'weight' => $exercise['weight'] ?? null,
+                                    'weight_min' => $exercise['weight_min'] ?? null,
+                                    'weight_max' => $exercise['weight_max'] ?? null,
+                                    'distance' => $exercise['distance'] ?? null,
+                                    'distance_min' => $exercise['distance_min'] ?? null,
+                                    'distance_max' => $exercise['distance_max'] ?? null,
+                                    'time_seconds' => $exercise['time_seconds'] ?? null,
+                                    'time_seconds_min' => $exercise['time_seconds_min'] ?? null,
+                                    'time_seconds_max' => $exercise['time_seconds_max'] ?? null,
+                                    'order' => $order + 1,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ];
+                            }
                         }
                     }
                 }
-            }
-        });
 
-        session()->flash('success', __('Program created successfully!'));
-        $this->redirect(route('programs.show', Program::where('user_id', Auth::id())->latest()->first()));
+                // Insert exercises in chunks of 500 to avoid query size limits
+                if (!empty($exercisesToInsert)) {
+                    foreach (array_chunk($exercisesToInsert, 500) as $chunk) {
+                        DB::table('day_exercises')->insert($chunk);
+                    }
+                }
+            });
+
+            // Delete draft after successful creation
+            ProgramDraft::where('user_id', Auth::id())->delete();
+            $this->hasDraft = false;
+
+            session()->flash('success', __('Program created successfully!'));
+            $this->redirect(route('programs.show', Program::where('user_id', Auth::id())->latest()->first()));
+            
+        } catch (\Exception $e) {
+            \Log::error('Program creation failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            $this->addError('general', __('An error occurred while creating the program. Your draft has been saved. Please try again.'));
+        }
     }
 }; ?>
 
@@ -394,6 +583,24 @@ new class extends Component {
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
+        </div>
+    @endif
+
+    @if($hasDraft)
+        <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <strong>{{ __('Draft saved') }}</strong>
+                    <span class="ml-2">{{ __('Last saved :time', ['time' => $lastSavedAt]) }}</span>
+                </div>
+                <button 
+                    wire:click="discardDraft" 
+                    type="button"
+                    class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 underline"
+                >
+                    {{ __('Discard draft') }}
+                </button>
+            </div>
         </div>
     @endif
 
@@ -734,3 +941,22 @@ new class extends Component {
         </div>
     </form>
 </section>
+
+@script
+<script>
+    let autoSaveTimeout;
+    
+    // Debounced auto-save (2 seconds after last change)
+    $wire.on('schedule-autosave', () => {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(() => {
+            $wire.call('autoSave');
+        }, 2000); // 2 seconds debounce
+    });
+
+    // Also auto-save every 60 seconds as backup
+    setInterval(() => {
+        $wire.call('autoSave');
+    }, 60000);
+</script>
+@endscript
