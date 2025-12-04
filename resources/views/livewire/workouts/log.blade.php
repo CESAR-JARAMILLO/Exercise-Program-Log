@@ -156,7 +156,8 @@ new class extends Component {
             // Create workout exercises
             $order = 1;
             foreach ($this->exercises as $dayExerciseId => $exerciseData) {
-                if (!empty($exerciseData['name'])) {
+                // Always create exercise if data exists (name is set from target exercise)
+                if (isset($exerciseData['name']) && !empty($exerciseData['name'])) {
                     // Convert time from hours/minutes/seconds to total seconds
                     $timeSeconds = null;
                     if (isset($exerciseData['time_hours']) || isset($exerciseData['time_minutes']) || isset($exerciseData['time_seconds'])) {
@@ -262,12 +263,6 @@ new class extends Component {
                     <div>
                         <h4 class="text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-2">{{ __('Actual') }}</h4>
                         <div class="space-y-3">
-                            <flux:input 
-                                wire:model="exercises.{{ $targetExercise->id }}.name"
-                                :label="__('Exercise Name')"
-                                placeholder="Exercise name"
-                            />
-                            
                             @php
                                 $isStrength = $targetExercise->type === 'strength';
                                 $isCardio = $targetExercise->type === 'cardio';

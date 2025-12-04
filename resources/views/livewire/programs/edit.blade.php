@@ -136,7 +136,7 @@ new class extends Component {
     public function toggleWeek($week): void
     {
         $week = (int) $week;
-        $this->expandedWeeks[$week] = !($this->expandedWeeks[$week] ?? false);
+        $this->expandedWeeks[$week] = !($this->expandedWeeks[$week] ?? true);
     }
 
     public function addExercise($week, $day): void
@@ -179,6 +179,145 @@ new class extends Component {
             unset($this->exercises[$week][$day][$index]);
             $this->exercises[$week][$day] = array_values($this->exercises[$week][$day]);
         }
+    }
+
+    public function copyDay($week, $sourceDay, $targetDay): void
+    {
+        $week = (int) $week;
+        $sourceDay = (int) $sourceDay;
+        $targetDay = (int) $targetDay;
+
+        if (!isset($this->exercises[$week][$sourceDay])) {
+            return;
+        }
+
+        // Deep copy the exercises array
+        $this->exercises[$week][$targetDay] = [];
+        foreach ($this->exercises[$week][$sourceDay] as $exercise) {
+            $this->exercises[$week][$targetDay][] = [
+                'id' => $exercise['id'] ?? null,
+                'name' => $exercise['name'] ?? '',
+                'type' => $exercise['type'] ?? 'strength',
+                'sets' => $exercise['sets'] ?? null,
+                'sets_min' => $exercise['sets_min'] ?? null,
+                'sets_max' => $exercise['sets_max'] ?? null,
+                'reps' => $exercise['reps'] ?? null,
+                'reps_min' => $exercise['reps_min'] ?? null,
+                'reps_max' => $exercise['reps_max'] ?? null,
+                'weight' => $exercise['weight'] ?? null,
+                'weight_min' => $exercise['weight_min'] ?? null,
+                'weight_max' => $exercise['weight_max'] ?? null,
+                'distance' => $exercise['distance'] ?? null,
+                'distance_min' => $exercise['distance_min'] ?? null,
+                'distance_max' => $exercise['distance_max'] ?? null,
+                'time_seconds' => $exercise['time_seconds'] ?? null,
+                'time_seconds_min' => $exercise['time_seconds_min'] ?? null,
+                'time_seconds_max' => $exercise['time_seconds_max'] ?? null,
+            ];
+        }
+
+        // Also copy the rest day status
+        if (isset($this->restDays[$week][$sourceDay])) {
+            $this->restDays[$week][$targetDay] = $this->restDays[$week][$sourceDay];
+        }
+
+        session()->flash(
+            'copied',
+            __('Day :source copied to Day :target successfully!', [
+                'source' => $sourceDay,
+                'target' => $targetDay,
+            ]),
+        );
+    }
+
+    public function getAvailableDaysToCopy($week, $currentDay): array
+    {
+        $available = [];
+        for ($day = 1; $day <= 7; $day++) {
+            if ($day != $currentDay && !empty($this->exercises[$week][$day])) {
+                $exerciseCount = collect($this->exercises[$week][$day])
+                    ->filter(fn($ex) => !empty($ex['name']))
+                    ->count();
+
+                if ($exerciseCount > 0) {
+                    $available[$day] = $exerciseCount;
+                }
+            }
+        }
+        return $available;
+    }
+
+    public function copyWeek($sourceWeek, $targetWeek): void
+    {
+        $sourceWeek = (int) $sourceWeek;
+        $targetWeek = (int) $targetWeek;
+
+        if (!isset($this->exercises[$sourceWeek])) {
+            return;
+        }
+
+        // Copy all days and exercises from source week to target week
+        $this->exercises[$targetWeek] = [];
+        $this->restDays[$targetWeek] = [];
+
+        foreach ($this->exercises[$sourceWeek] as $dayNum => $dayExercises) {
+            // Deep copy the exercises array for each day
+            $this->exercises[$targetWeek][$dayNum] = [];
+            foreach ($dayExercises as $exercise) {
+                $this->exercises[$targetWeek][$dayNum][] = [
+                    'id' => $exercise['id'] ?? null,
+                    'name' => $exercise['name'] ?? '',
+                    'type' => $exercise['type'] ?? 'strength',
+                    'sets' => $exercise['sets'] ?? null,
+                    'sets_min' => $exercise['sets_min'] ?? null,
+                    'sets_max' => $exercise['sets_max'] ?? null,
+                    'reps' => $exercise['reps'] ?? null,
+                    'reps_min' => $exercise['reps_min'] ?? null,
+                    'reps_max' => $exercise['reps_max'] ?? null,
+                    'weight' => $exercise['weight'] ?? null,
+                    'weight_min' => $exercise['weight_min'] ?? null,
+                    'weight_max' => $exercise['weight_max'] ?? null,
+                    'distance' => $exercise['distance'] ?? null,
+                    'distance_min' => $exercise['distance_min'] ?? null,
+                    'distance_max' => $exercise['distance_max'] ?? null,
+                    'time_seconds' => $exercise['time_seconds'] ?? null,
+                    'time_seconds_min' => $exercise['time_seconds_min'] ?? null,
+                    'time_seconds_max' => $exercise['time_seconds_max'] ?? null,
+                ];
+            }
+
+            // Copy the rest day status
+            if (isset($this->restDays[$sourceWeek][$dayNum])) {
+                $this->restDays[$targetWeek][$dayNum] = $this->restDays[$sourceWeek][$dayNum];
+            }
+        }
+
+        session()->flash(
+            'copied',
+            __('Week :source copied to Week :target successfully!', [
+                'source' => $sourceWeek,
+                'target' => $targetWeek,
+            ]),
+        );
+    }
+
+    public function getAvailableWeeksToCopy($currentWeek): array
+    {
+        $available = [];
+        for ($week = 1; $week <= $this->length_weeks; $week++) {
+            if ($week != $currentWeek && !empty($this->exercises[$week])) {
+                // Count total exercises across all days in the week
+                $totalExercises = 0;
+                foreach ($this->exercises[$week] as $dayExercises) {
+                    $totalExercises += collect($dayExercises)->filter(fn($ex) => !empty($ex['name']))->count();
+                }
+
+                if ($totalExercises > 0) {
+                    $available[$week] = $totalExercises;
+                }
+            }
+        }
+        return $available;
     }
 
     public function update(): void
@@ -391,6 +530,12 @@ new class extends Component {
         </p>
     </div>
 
+    @if (session('copied'))
+        <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/50 dark:text-green-200">
+            {{ session('copied') }}
+        </div>
+    @endif
+
     <form wire:submit="update" class="space-y-8">
         <!-- Program Details -->
         <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-6 space-y-4">
@@ -421,17 +566,47 @@ new class extends Component {
             <div class="space-y-4">
                 @foreach ($exercises as $weekNum => $days)
                     <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-                        <button type="button" wire:click="toggleWeek({{ $weekNum }})"
-                            class="w-full flex items-center justify-between p-6 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                        <div class="flex items-center justify-between p-6 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                             <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                                 {{ __('Week :number', ['number' => $weekNum]) }}
                             </h3>
-                            <svg class="w-5 h-5 text-zinc-500 dark:text-zinc-400 transition-transform {{ $expandedWeeks[$weekNum] ?? true ? 'rotate-180' : '' }}"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
+                            <div class="flex items-center gap-2">
+                                @php
+                                    $availableWeeks = $this->getAvailableWeeksToCopy($weekNum);
+                                @endphp
+                                @if (!empty($availableWeeks))
+                                    <flux:dropdown position="bottom" align="end">
+                                        <flux:button type="button" variant="ghost" size="sm">
+                                            {{ __('Copy Week') }}
+                                        </flux:button>
+
+                                        <flux:menu>
+                                            <flux:menu.heading>{{ __('Copy from:') }}
+                                            </flux:menu.heading>
+                                            @foreach ($availableWeeks as $sourceWeek => $exerciseCount)
+                                                <flux:menu.item
+                                                    wire:click="copyWeek({{ $sourceWeek }}, {{ $weekNum }})"
+                                                    type="button">
+                                                    {{ __('Week :number (:count :exercise)', [
+                                                        'number' => $sourceWeek,
+                                                        'count' => $exerciseCount,
+                                                        'exercise' => $exerciseCount === 1 ? 'exercise' : 'exercises',
+                                                    ]) }}
+                                                </flux:menu.item>
+                                            @endforeach
+                                        </flux:menu>
+                                    </flux:dropdown>
+                                @endif
+                                <button type="button" wire:click="toggleWeek({{ $weekNum }})"
+                                    class="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded transition-colors">
+                                    <svg class="w-5 h-5 text-zinc-500 dark:text-zinc-400 transition-transform {{ $expandedWeeks[$weekNum] ?? true ? 'rotate-180' : '' }}"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
 
                         @if ($expandedWeeks[$weekNum] ?? true)
                             <div class="px-6 pb-6">
@@ -460,12 +635,43 @@ new class extends Component {
                                                         </label>
                                                     @endif
                                                 </div>
-                                                <div class="flex items-center justify-center sm:justify-end">
+                                                <div class="flex items-center justify-center sm:justify-end gap-2 flex-wrap">
                                                     <flux:button type="button"
                                                         wire:click="addExercise({{ $weekNum }}, {{ $dayNum }})"
                                                         variant="ghost" size="sm">
                                                         {{ __('+ Add Exercise') }}
                                                     </flux:button>
+
+                                                    @php
+                                                        $availableDays = $this->getAvailableDaysToCopy(
+                                                            $weekNum,
+                                                            $dayNum,
+                                                        );
+                                                    @endphp
+
+                                                    @if (!empty($availableDays))
+                                                        <flux:dropdown position="bottom" align="end">
+                                                            <flux:button type="button" variant="ghost" size="sm">
+                                                                {{ __('Copy Day') }}
+                                                            </flux:button>
+
+                                                            <flux:menu>
+                                                                <flux:menu.heading>{{ __('Copy from:') }}
+                                                                </flux:menu.heading>
+                                                                @foreach ($availableDays as $sourceDay => $exerciseCount)
+                                                                    <flux:menu.item
+                                                                        wire:click="copyDay({{ $weekNum }}, {{ $sourceDay }}, {{ $dayNum }})"
+                                                                        type="button">
+                                                                        {{ __('Day :number (:count :exercise)', [
+                                                                            'number' => $sourceDay,
+                                                                            'count' => $exerciseCount,
+                                                                            'exercise' => $exerciseCount === 1 ? 'exercise' : 'exercises',
+                                                                        ]) }}
+                                                                    </flux:menu.item>
+                                                                @endforeach
+                                                            </flux:menu>
+                                                        </flux:dropdown>
+                                                    @endif
                                                 </div>
                                             </div>
 
