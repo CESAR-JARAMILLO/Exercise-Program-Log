@@ -364,7 +364,7 @@ new class extends Component {
                                                         </div>
 
                                                         <div class="grid gap-3 md:grid-cols-4">
-                                                            @if ($exercise->sets || ($exercise->sets_min && $exercise->sets_max))
+                                                            @if ($exercise->sets || $exercise->sets_min || $exercise->sets_max)
                                                                 <div class="text-center md:text-left">
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -374,6 +374,10 @@ new class extends Component {
                                                                         class="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
                                                                         @if ($exercise->sets_min && $exercise->sets_max)
                                                                             {{ $exercise->sets_min }}-{{ $exercise->sets_max }}
+                                                                        @elseif ($exercise->sets_min)
+                                                                            {{ $exercise->sets_min }}+
+                                                                        @elseif ($exercise->sets_max)
+                                                                            {{ __('up to :max', ['max' => $exercise->sets_max]) }}
                                                                         @else
                                                                             {{ $exercise->sets }}
                                                                         @endif
@@ -381,7 +385,7 @@ new class extends Component {
                                                                 </div>
                                                             @endif
 
-                                                            @if ($exercise->reps || ($exercise->reps_min && $exercise->reps_max))
+                                                            @if ($exercise->reps || $exercise->reps_min || $exercise->reps_max)
                                                                 <div class="text-center md:text-left">
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -391,6 +395,10 @@ new class extends Component {
                                                                         class="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
                                                                         @if ($exercise->reps_min && $exercise->reps_max)
                                                                             {{ $exercise->reps_min }}-{{ $exercise->reps_max }}
+                                                                        @elseif ($exercise->reps_min)
+                                                                            {{ $exercise->reps_min }}+
+                                                                        @elseif ($exercise->reps_max)
+                                                                            {{ __('up to :max', ['max' => $exercise->reps_max]) }}
                                                                         @else
                                                                             {{ $exercise->reps }}
                                                                         @endif
@@ -398,7 +406,7 @@ new class extends Component {
                                                                 </div>
                                                             @endif
 
-                                                            @if ($exercise->weight || ($exercise->weight_min && $exercise->weight_max))
+                                                            @if ($exercise->weight || $exercise->weight_min || $exercise->weight_max)
                                                                 <div class="text-center md:text-left">
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -409,6 +417,10 @@ new class extends Component {
                                                                         @if ($exercise->weight_min && $exercise->weight_max)
                                                                             {{ $exercise->weight_min }}-{{ $exercise->weight_max }}
                                                                             lbs
+                                                                        @elseif ($exercise->weight_min)
+                                                                            {{ $exercise->weight_min }}+ lbs
+                                                                        @elseif ($exercise->weight_max)
+                                                                            {{ __('up to :max lbs', ['max' => $exercise->weight_max]) }}
                                                                         @else
                                                                             {{ $exercise->weight }} lbs
                                                                         @endif
@@ -416,7 +428,7 @@ new class extends Component {
                                                                 </div>
                                                             @endif
 
-                                                            @if ($exercise->distance || ($exercise->distance_min && $exercise->distance_max))
+                                                            @if ($exercise->distance || $exercise->distance_min || $exercise->distance_max)
                                                                 <div class="text-center md:text-left">
                                                                     <p
                                                                         class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -427,6 +439,10 @@ new class extends Component {
                                                                         @if ($exercise->distance_min && $exercise->distance_max)
                                                                             {{ $exercise->distance_min }}-{{ $exercise->distance_max }}
                                                                             miles
+                                                                        @elseif ($exercise->distance_min)
+                                                                            {{ $exercise->distance_min }}+ miles
+                                                                        @elseif ($exercise->distance_max)
+                                                                            {{ __('up to :max miles', ['max' => $exercise->distance_max]) }}
                                                                         @else
                                                                             {{ $exercise->distance }} miles
                                                                         @endif
@@ -435,7 +451,7 @@ new class extends Component {
                                                             @endif
                                                         </div>
 
-                                                        @if ($exercise->time_seconds || ($exercise->time_seconds_min && $exercise->time_seconds_max))
+                                                        @if ($exercise->time_seconds || $exercise->time_seconds_min || $exercise->time_seconds_max)
                                                             <div class="mt-3 text-center md:text-left">
                                                                 <p
                                                                     class="text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -445,6 +461,10 @@ new class extends Component {
                                                                     class="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
                                                                     @if ($exercise->time_seconds_min && $exercise->time_seconds_max)
                                                                         {{ gmdate('H:i:s', $exercise->time_seconds_min) }}-{{ gmdate('H:i:s', $exercise->time_seconds_max) }}
+                                                                    @elseif ($exercise->time_seconds_min)
+                                                                        {{ gmdate('H:i:s', $exercise->time_seconds_min) }}+
+                                                                    @elseif ($exercise->time_seconds_max)
+                                                                        {{ __('up to :max', ['max' => gmdate('H:i:s', $exercise->time_seconds_max)]) }}
                                                                     @else
                                                                         {{ gmdate('H:i:s', $exercise->time_seconds) }}
                                                                     @endif

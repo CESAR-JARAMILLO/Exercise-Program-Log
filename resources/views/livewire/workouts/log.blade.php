@@ -243,20 +243,80 @@ new class extends Component {
                     <div>
                         <h4 class="text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-2">{{ __('Target') }}</h4>
                         <div class="space-y-1 text-sm">
-                            @if($targetExercise->sets || ($targetExercise->sets_min && $targetExercise->sets_max))
-                                <p>{{ __('Sets: :value', ['value' => ($targetExercise->sets_min && $targetExercise->sets_max) ? $targetExercise->sets_min . '-' . $targetExercise->sets_max : $targetExercise->sets]) }}</p>
+                            @if($targetExercise->sets || $targetExercise->sets_min || $targetExercise->sets_max)
+                                @php
+                                    $setsValue = '';
+                                    if ($targetExercise->sets_min && $targetExercise->sets_max) {
+                                        $setsValue = $targetExercise->sets_min . '-' . $targetExercise->sets_max;
+                                    } elseif ($targetExercise->sets_min) {
+                                        $setsValue = $targetExercise->sets_min . '+';
+                                    } elseif ($targetExercise->sets_max) {
+                                        $setsValue = __('up to :max', ['max' => $targetExercise->sets_max]);
+                                    } else {
+                                        $setsValue = $targetExercise->sets;
+                                    }
+                                @endphp
+                                <p>{{ __('Sets: :value', ['value' => $setsValue]) }}</p>
                             @endif
-                            @if($targetExercise->reps || ($targetExercise->reps_min && $targetExercise->reps_max))
-                                <p>{{ __('Reps: :value', ['value' => ($targetExercise->reps_min && $targetExercise->reps_max) ? $targetExercise->reps_min . '-' . $targetExercise->reps_max : $targetExercise->reps]) }}</p>
+                            @if($targetExercise->reps || $targetExercise->reps_min || $targetExercise->reps_max)
+                                @php
+                                    $repsValue = '';
+                                    if ($targetExercise->reps_min && $targetExercise->reps_max) {
+                                        $repsValue = $targetExercise->reps_min . '-' . $targetExercise->reps_max;
+                                    } elseif ($targetExercise->reps_min) {
+                                        $repsValue = $targetExercise->reps_min . '+';
+                                    } elseif ($targetExercise->reps_max) {
+                                        $repsValue = __('up to :max', ['max' => $targetExercise->reps_max]);
+                                    } else {
+                                        $repsValue = $targetExercise->reps;
+                                    }
+                                @endphp
+                                <p>{{ __('Reps: :value', ['value' => $repsValue]) }}</p>
                             @endif
-                            @if($targetExercise->weight || ($targetExercise->weight_min && $targetExercise->weight_max))
-                                <p>{{ __('Weight: :value lbs', ['value' => ($targetExercise->weight_min && $targetExercise->weight_max) ? $targetExercise->weight_min . '-' . $targetExercise->weight_max : $targetExercise->weight]) }}</p>
+                            @if($targetExercise->weight || $targetExercise->weight_min || $targetExercise->weight_max)
+                                @php
+                                    $weightValue = '';
+                                    if ($targetExercise->weight_min && $targetExercise->weight_max) {
+                                        $weightValue = $targetExercise->weight_min . '-' . $targetExercise->weight_max;
+                                    } elseif ($targetExercise->weight_min) {
+                                        $weightValue = $targetExercise->weight_min . '+';
+                                    } elseif ($targetExercise->weight_max) {
+                                        $weightValue = __('up to :max', ['max' => $targetExercise->weight_max]);
+                                    } else {
+                                        $weightValue = $targetExercise->weight;
+                                    }
+                                @endphp
+                                <p>{{ __('Weight: :value lbs', ['value' => $weightValue]) }}</p>
                             @endif
-                            @if($targetExercise->distance || ($targetExercise->distance_min && $targetExercise->distance_max))
-                                <p>{{ __('Distance: :value miles', ['value' => ($targetExercise->distance_min && $targetExercise->distance_max) ? $targetExercise->distance_min . '-' . $targetExercise->distance_max : $targetExercise->distance]) }}</p>
+                            @if($targetExercise->distance || $targetExercise->distance_min || $targetExercise->distance_max)
+                                @php
+                                    $distanceValue = '';
+                                    if ($targetExercise->distance_min && $targetExercise->distance_max) {
+                                        $distanceValue = $targetExercise->distance_min . '-' . $targetExercise->distance_max;
+                                    } elseif ($targetExercise->distance_min) {
+                                        $distanceValue = $targetExercise->distance_min . '+';
+                                    } elseif ($targetExercise->distance_max) {
+                                        $distanceValue = __('up to :max', ['max' => $targetExercise->distance_max]);
+                                    } else {
+                                        $distanceValue = $targetExercise->distance;
+                                    }
+                                @endphp
+                                <p>{{ __('Distance: :value miles', ['value' => $distanceValue]) }}</p>
                             @endif
-                            @if($targetExercise->time_seconds || ($targetExercise->time_seconds_min && $targetExercise->time_seconds_max))
-                                <p>{{ __('Time: :value', ['value' => ($targetExercise->time_seconds_min && $targetExercise->time_seconds_max) ? gmdate('H:i:s', $targetExercise->time_seconds_min) . '-' . gmdate('H:i:s', $targetExercise->time_seconds_max) : gmdate('H:i:s', $targetExercise->time_seconds)]) }}</p>
+                            @if($targetExercise->time_seconds || $targetExercise->time_seconds_min || $targetExercise->time_seconds_max)
+                                @php
+                                    $timeValue = '';
+                                    if ($targetExercise->time_seconds_min && $targetExercise->time_seconds_max) {
+                                        $timeValue = gmdate('H:i:s', $targetExercise->time_seconds_min) . '-' . gmdate('H:i:s', $targetExercise->time_seconds_max);
+                                    } elseif ($targetExercise->time_seconds_min) {
+                                        $timeValue = gmdate('H:i:s', $targetExercise->time_seconds_min) . '+';
+                                    } elseif ($targetExercise->time_seconds_max) {
+                                        $timeValue = __('up to :max', ['max' => gmdate('H:i:s', $targetExercise->time_seconds_max)]);
+                                    } else {
+                                        $timeValue = gmdate('H:i:s', $targetExercise->time_seconds);
+                                    }
+                                @endphp
+                                <p>{{ __('Time: :value', ['value' => $timeValue]) }}</p>
                             @endif
                         </div>
                     </div>
@@ -335,11 +395,11 @@ new class extends Component {
                             @else
                                 {{-- For other types (flexibility, other), show all relevant fields --}}
                                 @php
-                                    $hasSets = $targetExercise->sets || ($targetExercise->sets_min && $targetExercise->sets_max);
-                                    $hasReps = $targetExercise->reps || ($targetExercise->reps_min && $targetExercise->reps_max);
-                                    $hasWeight = $targetExercise->weight || ($targetExercise->weight_min && $targetExercise->weight_max);
-                                    $hasDistance = $targetExercise->distance || ($targetExercise->distance_min && $targetExercise->distance_max);
-                                    $hasTime = $targetExercise->time_seconds || ($targetExercise->time_seconds_min && $targetExercise->time_seconds_max);
+                                    $hasSets = $targetExercise->sets || $targetExercise->sets_min || $targetExercise->sets_max;
+                                    $hasReps = $targetExercise->reps || $targetExercise->reps_min || $targetExercise->reps_max;
+                                    $hasWeight = $targetExercise->weight || $targetExercise->weight_min || $targetExercise->weight_max;
+                                    $hasDistance = $targetExercise->distance || $targetExercise->distance_min || $targetExercise->distance_max;
+                                    $hasTime = $targetExercise->time_seconds || $targetExercise->time_seconds_min || $targetExercise->time_seconds_max;
                                 @endphp
                                 
                                 @if($hasSets)
