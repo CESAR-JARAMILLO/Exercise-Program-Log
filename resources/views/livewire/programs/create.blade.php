@@ -503,7 +503,17 @@ new class extends Component {
                 // Bulk insert days
                 $daysToInsert = [];
                 foreach ($this->exercises as $weekNum => $days) {
-                    $programWeek = $insertedWeeks[$weekNum];
+                    $programWeek = $insertedWeeks[$weekNum] ?? null;
+
+                    // Skip if week not found (defensive programming)
+                    if (!$programWeek) {
+                        \Log::warning('Program creation: Week not found in inserted weeks', [
+                            'week_number' => $weekNum,
+                            'program_id' => $program->id,
+                            'inserted_weeks' => $insertedWeeks->keys()->toArray(),
+                        ]);
+                        continue;
+                    }
 
                     foreach ($days as $dayNum => $dayExercises) {
                         // Check if day has any exercises with names
