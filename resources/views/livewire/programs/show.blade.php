@@ -375,9 +375,9 @@ new class extends Component {
                                                                         @if ($exercise->sets_min && $exercise->sets_max)
                                                                             {{ $exercise->sets_min }}-{{ $exercise->sets_max }}
                                                                         @elseif ($exercise->sets_min)
-                                                                            {{ $exercise->sets_min }}+
+                                                                            {{ $exercise->sets_min }}
                                                                         @elseif ($exercise->sets_max)
-                                                                            {{ __('up to :max', ['max' => $exercise->sets_max]) }}
+                                                                            {{ __(':max', ['max' => $exercise->sets_max]) }}
                                                                         @else
                                                                             {{ $exercise->sets }}
                                                                         @endif
@@ -396,9 +396,9 @@ new class extends Component {
                                                                         @if ($exercise->reps_min && $exercise->reps_max)
                                                                             {{ $exercise->reps_min }}-{{ $exercise->reps_max }}
                                                                         @elseif ($exercise->reps_min)
-                                                                            {{ $exercise->reps_min }}+
+                                                                            {{ $exercise->reps_min }}
                                                                         @elseif ($exercise->reps_max)
-                                                                            {{ __('up to :max', ['max' => $exercise->reps_max]) }}
+                                                                            {{ __(':max', ['max' => $exercise->reps_max]) }}
                                                                         @else
                                                                             {{ $exercise->reps }}
                                                                         @endif
@@ -418,9 +418,9 @@ new class extends Component {
                                                                             {{ $exercise->weight_min }}-{{ $exercise->weight_max }}
                                                                             lbs
                                                                         @elseif ($exercise->weight_min)
-                                                                            {{ $exercise->weight_min }}+ lbs
+                                                                            {{ $exercise->weight_min }} lbs
                                                                         @elseif ($exercise->weight_max)
-                                                                            {{ __('up to :max lbs', ['max' => $exercise->weight_max]) }}
+                                                                            {{ __(':max lbs', ['max' => $exercise->weight_max]) }}
                                                                         @else
                                                                             {{ $exercise->weight }} lbs
                                                                         @endif
@@ -440,9 +440,9 @@ new class extends Component {
                                                                             {{ $exercise->distance_min }}-{{ $exercise->distance_max }}
                                                                             miles
                                                                         @elseif ($exercise->distance_min)
-                                                                            {{ $exercise->distance_min }}+ miles
+                                                                            {{ $exercise->distance_min }} miles
                                                                         @elseif ($exercise->distance_max)
-                                                                            {{ __('up to :max miles', ['max' => $exercise->distance_max]) }}
+                                                                            {{ __(':max miles', ['max' => $exercise->distance_max]) }}
                                                                         @else
                                                                             {{ $exercise->distance }} miles
                                                                         @endif
@@ -462,9 +462,9 @@ new class extends Component {
                                                                     @if ($exercise->time_seconds_min && $exercise->time_seconds_max)
                                                                         {{ gmdate('H:i:s', $exercise->time_seconds_min) }}-{{ gmdate('H:i:s', $exercise->time_seconds_max) }}
                                                                     @elseif ($exercise->time_seconds_min)
-                                                                        {{ gmdate('H:i:s', $exercise->time_seconds_min) }}+
+                                                                        {{ gmdate('H:i:s', $exercise->time_seconds_min) }}
                                                                     @elseif ($exercise->time_seconds_max)
-                                                                        {{ __('up to :max', ['max' => gmdate('H:i:s', $exercise->time_seconds_max)]) }}
+                                                                        {{ __(':max', ['max' => gmdate('H:i:s', $exercise->time_seconds_max)]) }}
                                                                     @else
                                                                         {{ gmdate('H:i:s', $exercise->time_seconds) }}
                                                                     @endif
