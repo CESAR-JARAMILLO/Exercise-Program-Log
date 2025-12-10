@@ -13,7 +13,7 @@ new class extends Component {
     public string $workoutDate;
     public ?int $workoutLogId = null;
     public ?string $notes = null;
-    
+
     // Exercise data: [exercise_id => [sets_actual, reps_actual, etc.]]
     public array $exercises = [];
 
@@ -25,19 +25,19 @@ new class extends Component {
         } else {
             $activeProgram = ActiveProgram::findOrFail($activeProgram);
         }
-        
+
         abort_unless($activeProgram->user_id === Auth::id(), 403);
-        
+
         $this->activeProgramId = $activeProgram->id;
         $this->workoutDate = Carbon::parse($date)->format('Y-m-d');
-        
+
         // Check if workout is already logged
         $workoutLog = $activeProgram->getWorkoutLogForDate($this->workoutDate);
-        
+
         if ($workoutLog) {
             $this->workoutLogId = $workoutLog->id;
             $this->notes = $workoutLog->notes;
-            
+
             // Load existing exercise data
             foreach ($workoutLog->exercises as $workoutExercise) {
                 $timeSeconds = $workoutExercise->time_seconds_actual;
@@ -51,7 +51,7 @@ new class extends Component {
                     'time_seconds_actual' => $timeSeconds,
                     'time_hours' => $timeSeconds ? floor($timeSeconds / 3600) : null,
                     'time_minutes' => $timeSeconds ? floor(($timeSeconds % 3600) / 60) : null,
-                    'time_seconds' => $timeSeconds ? ($timeSeconds % 60) : null,
+                    'time_seconds' => $timeSeconds ? $timeSeconds % 60 : null,
                     'notes' => $workoutExercise->notes,
                 ];
             }
@@ -62,23 +62,18 @@ new class extends Component {
     {
         $activeProgram = ActiveProgram::with(['program.weeks.days.exercises'])->findOrFail($this->activeProgramId);
         abort_unless($activeProgram->user_id === Auth::id(), 403);
-        
+
         // Find which day this date corresponds to
         $scheduled = $activeProgram->hasScheduledWorkout(Carbon::parse($this->workoutDate));
-        
+
         if (!$scheduled) {
             abort(404, 'No workout scheduled for this date.');
         }
-        
-        $programDay = $activeProgram->program->weeks
-            ->where('week_number', $scheduled['week'])
-            ->first()
-            ->days
-            ->where('day_number', $scheduled['day'])
-            ->first();
-        
+
+        $programDay = $activeProgram->program->weeks->where('week_number', $scheduled['week'])->first()->days->where('day_number', $scheduled['day'])->first();
+
         $targetExercises = $programDay->exercises->sortBy('order');
-        
+
         // Initialize exercises array with target data if not already set
         foreach ($targetExercises as $targetExercise) {
             if (!isset($this->exercises[$targetExercise->id])) {
@@ -101,13 +96,13 @@ new class extends Component {
                     $timeSeconds = $this->exercises[$targetExercise->id]['time_seconds_actual'] ?? null;
                     $this->exercises[$targetExercise->id]['time_hours'] = $timeSeconds ? floor($timeSeconds / 3600) : null;
                     $this->exercises[$targetExercise->id]['time_minutes'] = $timeSeconds ? floor(($timeSeconds % 3600) / 60) : null;
-                    $this->exercises[$targetExercise->id]['time_seconds'] = $timeSeconds ? ($timeSeconds % 60) : null;
+                    $this->exercises[$targetExercise->id]['time_seconds'] = $timeSeconds ? $timeSeconds % 60 : null;
                 }
             }
         }
-        
+
         $workoutLog = $this->workoutLogId ? WorkoutLog::find($this->workoutLogId) : null;
-        
+
         return [
             'activeProgram' => $activeProgram,
             'programDay' => $programDay,
@@ -121,18 +116,18 @@ new class extends Component {
     {
         $activeProgram = ActiveProgram::findOrFail($this->activeProgramId);
         abort_unless($activeProgram->user_id === Auth::id(), 403);
-        
+
         $scheduled = $activeProgram->hasScheduledWorkout(Carbon::parse($this->workoutDate));
         if (!$scheduled) {
             session()->flash('error', __('No workout scheduled for this date.'));
             return;
         }
-        
+
         $validated = $this->validate([
             'notes' => ['nullable', 'string'],
             'exercises' => ['required', 'array'],
         ]);
-        
+
         DB::transaction(function () use ($activeProgram, $scheduled, $validated) {
             // Create or update workout log
             if ($this->workoutLogId) {
@@ -140,7 +135,7 @@ new class extends Component {
                 $workoutLog->update([
                     'notes' => $validated['notes'],
                 ]);
-                
+
                 // Delete existing exercises
                 $workoutLog->exercises()->delete();
             } else {
@@ -152,7 +147,7 @@ new class extends Component {
                     'notes' => $validated['notes'],
                 ]);
             }
-            
+
             // Create workout exercises
             $order = 1;
             foreach ($this->exercises as $dayExerciseId => $exerciseData) {
@@ -161,17 +156,17 @@ new class extends Component {
                     // Convert time from hours/minutes/seconds to total seconds
                     $timeSeconds = null;
                     if (isset($exerciseData['time_hours']) || isset($exerciseData['time_minutes']) || isset($exerciseData['time_seconds'])) {
-                        $hours = (int)($exerciseData['time_hours'] ?? 0);
-                        $minutes = (int)($exerciseData['time_minutes'] ?? 0);
-                        $seconds = (int)($exerciseData['time_seconds'] ?? 0);
+                        $hours = (int) ($exerciseData['time_hours'] ?? 0);
+                        $minutes = (int) ($exerciseData['time_minutes'] ?? 0);
+                        $seconds = (int) ($exerciseData['time_seconds'] ?? 0);
                         if ($hours > 0 || $minutes > 0 || $seconds > 0) {
-                            $timeSeconds = ($hours * 3600) + ($minutes * 60) + $seconds;
+                            $timeSeconds = $hours * 3600 + $minutes * 60 + $seconds;
                         }
                     } else {
                         // Fallback to time_seconds_actual if time breakdown not provided
                         $timeSeconds = $exerciseData['time_seconds_actual'] ?? null;
                     }
-                    
+
                     WorkoutExercise::create([
                         'workout_log_id' => $workoutLog->id,
                         'day_exercise_id' => $dayExerciseId,
@@ -187,12 +182,12 @@ new class extends Component {
                     ]);
                 }
             }
-            
+
             // Update progress after logging workout
             $activeProgram->refresh();
             $activeProgram->updateProgress();
         });
-        
+
         // Get program for redirect
         $activeProgram = ActiveProgram::with('program')->findOrFail($this->activeProgramId);
         session()->flash('success', __('Workout logged successfully!'));
@@ -202,13 +197,15 @@ new class extends Component {
 
 <section class="w-full">
     @if (session('success'))
-        <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/50 dark:text-green-200">
+        <div
+            class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/50 dark:text-green-200">
             {{ session('success') }}
         </div>
     @endif
 
     @if (session('error'))
-        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200">
+        <div
+            class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200">
             {{ session('error') }}
         </div>
     @endif
@@ -218,13 +215,13 @@ new class extends Component {
             {{ __('Log Workout') }}
         </h1>
         <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {{ __('Date: :date', ['date' => Carbon::parse($this->workoutDate)->format('M d, Y')]) }} | 
+            {{ __('Date: :date', ['date' => Carbon::parse($this->workoutDate)->format('M d, Y')]) }} |
             {{ __('Program: :name', ['name' => $activeProgram->program->name]) }}
         </p>
     </div>
 
     <form wire:submit="save" class="space-y-6">
-        @foreach($targetExercises as $targetExercise)
+        @foreach ($targetExercises as $targetExercise)
             @php
                 $exerciseData = $exercises[$targetExercise->id] ?? [];
             @endphp
@@ -233,7 +230,8 @@ new class extends Component {
                     <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                         {{ $targetExercise->name }}
                     </h3>
-                    <span class="mt-1 inline-block rounded-full bg-primary-100 dark:bg-primary-900/30 px-2 py-1 text-xs font-medium text-primary-700 dark:text-primary-300">
+                    <span
+                        class="mt-1 inline-block rounded-full bg-primary-100 dark:bg-primary-900/30 px-2 py-1 text-xs font-medium text-primary-700 dark:text-primary-300">
                         {{ ucfirst($targetExercise->type) }}
                     </span>
                 </div>
@@ -243,75 +241,79 @@ new class extends Component {
                     <div>
                         <h4 class="text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-2">{{ __('Target') }}</h4>
                         <div class="space-y-1 text-sm">
-                            @if($targetExercise->sets || $targetExercise->sets_min || $targetExercise->sets_max)
+                            @if ($targetExercise->sets || $targetExercise->sets_min || $targetExercise->sets_max)
                                 @php
                                     $setsValue = '';
                                     if ($targetExercise->sets_min && $targetExercise->sets_max) {
                                         $setsValue = $targetExercise->sets_min . '-' . $targetExercise->sets_max;
                                     } elseif ($targetExercise->sets_min) {
-                                        $setsValue = $targetExercise->sets_min . '+';
+                                        $setsValue = $targetExercise->sets_min;
                                     } elseif ($targetExercise->sets_max) {
-                                        $setsValue = __('up to :max', ['max' => $targetExercise->sets_max]);
+                                        $setsValue = $targetExercise->sets_max;
                                     } else {
                                         $setsValue = $targetExercise->sets;
                                     }
                                 @endphp
                                 <p>{{ __('Sets: :value', ['value' => $setsValue]) }}</p>
                             @endif
-                            @if($targetExercise->reps || $targetExercise->reps_min || $targetExercise->reps_max)
+                            @if ($targetExercise->reps || $targetExercise->reps_min || $targetExercise->reps_max)
                                 @php
                                     $repsValue = '';
                                     if ($targetExercise->reps_min && $targetExercise->reps_max) {
                                         $repsValue = $targetExercise->reps_min . '-' . $targetExercise->reps_max;
                                     } elseif ($targetExercise->reps_min) {
-                                        $repsValue = $targetExercise->reps_min . '+';
+                                        $repsValue = $targetExercise->reps_min;
                                     } elseif ($targetExercise->reps_max) {
-                                        $repsValue = __('up to :max', ['max' => $targetExercise->reps_max]);
+                                        $repsValue = $targetExercise->reps_max;
                                     } else {
                                         $repsValue = $targetExercise->reps;
                                     }
                                 @endphp
                                 <p>{{ __('Reps: :value', ['value' => $repsValue]) }}</p>
                             @endif
-                            @if($targetExercise->weight || $targetExercise->weight_min || $targetExercise->weight_max)
+                            @if ($targetExercise->weight || $targetExercise->weight_min || $targetExercise->weight_max)
                                 @php
                                     $weightValue = '';
                                     if ($targetExercise->weight_min && $targetExercise->weight_max) {
                                         $weightValue = $targetExercise->weight_min . '-' . $targetExercise->weight_max;
                                     } elseif ($targetExercise->weight_min) {
-                                        $weightValue = $targetExercise->weight_min . '+';
+                                        $weightValue = $targetExercise->weight_min;
                                     } elseif ($targetExercise->weight_max) {
-                                        $weightValue = __('up to :max', ['max' => $targetExercise->weight_max]);
+                                        $weightValue = $targetExercise->weight_max;
                                     } else {
                                         $weightValue = $targetExercise->weight;
                                     }
                                 @endphp
                                 <p>{{ __('Weight: :value lbs', ['value' => $weightValue]) }}</p>
                             @endif
-                            @if($targetExercise->distance || $targetExercise->distance_min || $targetExercise->distance_max)
+                            @if ($targetExercise->distance || $targetExercise->distance_min || $targetExercise->distance_max)
                                 @php
                                     $distanceValue = '';
                                     if ($targetExercise->distance_min && $targetExercise->distance_max) {
-                                        $distanceValue = $targetExercise->distance_min . '-' . $targetExercise->distance_max;
+                                        $distanceValue =
+                                            $targetExercise->distance_min . '-' . $targetExercise->distance_max;
                                     } elseif ($targetExercise->distance_min) {
-                                        $distanceValue = $targetExercise->distance_min . '+';
+                                        $distanceValue = $targetExercise->distance_min;
                                     } elseif ($targetExercise->distance_max) {
-                                        $distanceValue = __('up to :max', ['max' => $targetExercise->distance_max]);
+                                        $distanceValue = $targetExercise->distance_max;
                                     } else {
                                         $distanceValue = $targetExercise->distance;
                                     }
                                 @endphp
                                 <p>{{ __('Distance: :value miles', ['value' => $distanceValue]) }}</p>
                             @endif
-                            @if($targetExercise->time_seconds || $targetExercise->time_seconds_min || $targetExercise->time_seconds_max)
+                            @if ($targetExercise->time_seconds || $targetExercise->time_seconds_min || $targetExercise->time_seconds_max)
                                 @php
                                     $timeValue = '';
                                     if ($targetExercise->time_seconds_min && $targetExercise->time_seconds_max) {
-                                        $timeValue = gmdate('H:i:s', $targetExercise->time_seconds_min) . '-' . gmdate('H:i:s', $targetExercise->time_seconds_max);
+                                        $timeValue =
+                                            gmdate('H:i:s', $targetExercise->time_seconds_min) .
+                                            '-' .
+                                            gmdate('H:i:s', $targetExercise->time_seconds_max);
                                     } elseif ($targetExercise->time_seconds_min) {
-                                        $timeValue = gmdate('H:i:s', $targetExercise->time_seconds_min) . '+';
+                                        $timeValue = gmdate('H:i:s', $targetExercise->time_seconds_min);
                                     } elseif ($targetExercise->time_seconds_max) {
-                                        $timeValue = __('up to :max', ['max' => gmdate('H:i:s', $targetExercise->time_seconds_max)]);
+                                        $timeValue = gmdate('H:i:s', $targetExercise->time_seconds_max);
                                     } else {
                                         $timeValue = gmdate('H:i:s', $targetExercise->time_seconds);
                                     }
@@ -328,160 +330,109 @@ new class extends Component {
                                 $isCardio = $targetExercise->type === 'cardio';
                                 $isFlexibility = $targetExercise->type === 'flexibility';
                             @endphp
-                            
-                            @if($isStrength)
-                                <flux:input 
-                                    type="number"
-                                    wire:model="exercises.{{ $targetExercise->id }}.sets_actual"
-                                    :label="__('Sets')"
-                                    placeholder="Sets"
-                                    min="0"
-                                />
-                                
-                                <flux:input 
-                                    type="number"
-                                    wire:model="exercises.{{ $targetExercise->id }}.reps_actual"
-                                    :label="__('Reps')"
-                                    placeholder="Reps"
-                                    min="0"
-                                />
-                                
-                                <flux:input 
-                                    type="number"
+
+                            @if ($isStrength)
+                                <flux:input type="number" wire:model="exercises.{{ $targetExercise->id }}.sets_actual"
+                                    :label="__('Sets')" placeholder="Sets" min="0" />
+
+                                <flux:input type="number" wire:model="exercises.{{ $targetExercise->id }}.reps_actual"
+                                    :label="__('Reps')" placeholder="Reps" min="0" />
+
+                                <flux:input type="number"
                                     wire:model="exercises.{{ $targetExercise->id }}.weight_actual"
-                                    :label="__('Weight (lbs)')"
-                                    placeholder="Weight"
-                                    step="0.01"
-                                    min="0"
-                                />
+                                    :label="__('Weight (lbs)')" placeholder="Weight" step="0.01" min="0" />
                             @elseif($isCardio)
-                                <flux:input 
-                                    type="number"
+                                <flux:input type="number"
                                     wire:model="exercises.{{ $targetExercise->id }}.distance_actual"
-                                    :label="__('Distance (miles)')"
-                                    placeholder="Distance"
-                                    step="0.01"
-                                    min="0"
-                                />
-                                
+                                    :label="__('Distance (miles)')" placeholder="Distance" step="0.01"
+                                    min="0" />
+
                                 <div>
                                     <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                                         {{ __('Time') }}
                                     </label>
                                     <div class="grid grid-cols-3 gap-2">
-                                        <flux:input 
-                                            type="number"
+                                        <flux:input type="number"
                                             wire:model="exercises.{{ $targetExercise->id }}.time_hours"
-                                            placeholder="Hours"
-                                            min="0"
-                                            max="23"
-                                        />
-                                        <flux:input 
-                                            type="number"
+                                            placeholder="Hours" min="0" max="23" />
+                                        <flux:input type="number"
                                             wire:model="exercises.{{ $targetExercise->id }}.time_minutes"
-                                            placeholder="Minutes"
-                                            min="0"
-                                            max="59"
-                                        />
-                                        <flux:input 
-                                            type="number"
+                                            placeholder="Minutes" min="0" max="59" />
+                                        <flux:input type="number"
                                             wire:model="exercises.{{ $targetExercise->id }}.time_seconds"
-                                            placeholder="Seconds"
-                                            min="0"
-                                            max="59"
-                                        />
+                                            placeholder="Seconds" min="0" max="59" />
                                     </div>
                                 </div>
                             @else
                                 {{-- For other types (flexibility, other), show all relevant fields --}}
                                 @php
-                                    $hasSets = $targetExercise->sets || $targetExercise->sets_min || $targetExercise->sets_max;
-                                    $hasReps = $targetExercise->reps || $targetExercise->reps_min || $targetExercise->reps_max;
-                                    $hasWeight = $targetExercise->weight || $targetExercise->weight_min || $targetExercise->weight_max;
-                                    $hasDistance = $targetExercise->distance || $targetExercise->distance_min || $targetExercise->distance_max;
-                                    $hasTime = $targetExercise->time_seconds || $targetExercise->time_seconds_min || $targetExercise->time_seconds_max;
+                                    $hasSets =
+                                        $targetExercise->sets || $targetExercise->sets_min || $targetExercise->sets_max;
+                                    $hasReps =
+                                        $targetExercise->reps || $targetExercise->reps_min || $targetExercise->reps_max;
+                                    $hasWeight =
+                                        $targetExercise->weight ||
+                                        $targetExercise->weight_min ||
+                                        $targetExercise->weight_max;
+                                    $hasDistance =
+                                        $targetExercise->distance ||
+                                        $targetExercise->distance_min ||
+                                        $targetExercise->distance_max;
+                                    $hasTime =
+                                        $targetExercise->time_seconds ||
+                                        $targetExercise->time_seconds_min ||
+                                        $targetExercise->time_seconds_max;
                                 @endphp
-                                
-                                @if($hasSets)
-                                    <flux:input 
-                                        type="number"
+
+                                @if ($hasSets)
+                                    <flux:input type="number"
                                         wire:model="exercises.{{ $targetExercise->id }}.sets_actual"
-                                        :label="__('Sets')"
-                                        placeholder="Sets"
-                                        min="0"
-                                    />
+                                        :label="__('Sets')" placeholder="Sets" min="0" />
                                 @endif
-                                
-                                @if($hasReps)
-                                    <flux:input 
-                                        type="number"
+
+                                @if ($hasReps)
+                                    <flux:input type="number"
                                         wire:model="exercises.{{ $targetExercise->id }}.reps_actual"
-                                        :label="__('Reps')"
-                                        placeholder="Reps"
-                                        min="0"
-                                    />
+                                        :label="__('Reps')" placeholder="Reps" min="0" />
                                 @endif
-                                
-                                @if($hasWeight)
-                                    <flux:input 
-                                        type="number"
+
+                                @if ($hasWeight)
+                                    <flux:input type="number"
                                         wire:model="exercises.{{ $targetExercise->id }}.weight_actual"
-                                        :label="__('Weight (lbs)')"
-                                        placeholder="Weight"
-                                        step="0.01"
-                                        min="0"
-                                    />
+                                        :label="__('Weight (lbs)')" placeholder="Weight" step="0.01"
+                                        min="0" />
                                 @endif
-                                
-                                @if($hasDistance)
-                                    <flux:input 
-                                        type="number"
+
+                                @if ($hasDistance)
+                                    <flux:input type="number"
                                         wire:model="exercises.{{ $targetExercise->id }}.distance_actual"
-                                        :label="__('Distance (miles)')"
-                                        placeholder="Distance"
-                                        step="0.01"
-                                        min="0"
-                                    />
+                                        :label="__('Distance (miles)')" placeholder="Distance" step="0.01"
+                                        min="0" />
                                 @endif
-                                
-                                @if($hasTime)
+
+                                @if ($hasTime)
                                     <div>
                                         <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                                             {{ __('Time') }}
                                         </label>
                                         <div class="grid grid-cols-3 gap-2">
-                                            <flux:input 
-                                                type="number"
+                                            <flux:input type="number"
                                                 wire:model="exercises.{{ $targetExercise->id }}.time_hours"
-                                                placeholder="Hours"
-                                                min="0"
-                                                max="23"
-                                            />
-                                            <flux:input 
-                                                type="number"
+                                                placeholder="Hours" min="0" max="23" />
+                                            <flux:input type="number"
                                                 wire:model="exercises.{{ $targetExercise->id }}.time_minutes"
-                                                placeholder="Minutes"
-                                                min="0"
-                                                max="59"
-                                            />
-                                            <flux:input 
-                                                type="number"
+                                                placeholder="Minutes" min="0" max="59" />
+                                            <flux:input type="number"
                                                 wire:model="exercises.{{ $targetExercise->id }}.time_seconds"
-                                                placeholder="Seconds"
-                                                min="0"
-                                                max="59"
-                                            />
+                                                placeholder="Seconds" min="0" max="59" />
                                         </div>
                                     </div>
                                 @endif
                             @endif
-                            
-                            <flux:textarea 
-                                wire:model="exercises.{{ $targetExercise->id }}.notes"
+
+                            <flux:textarea wire:model="exercises.{{ $targetExercise->id }}.notes"
                                 :label="__('Exercise Notes (optional)')"
-                                placeholder="Add any notes about this exercise..."
-                                rows="2"
-                            />
+                                placeholder="Add any notes about this exercise..." rows="2" />
                         </div>
                     </div>
                 </div>
@@ -489,12 +440,8 @@ new class extends Component {
         @endforeach
 
         <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
-            <flux:textarea 
-                wire:model="notes" 
-                :label="__('Workout Notes')" 
-                placeholder="Overall workout notes..."
-                rows="3"
-            />
+            <flux:textarea wire:model="notes" :label="__('Workout Notes')" placeholder="Overall workout notes..."
+                rows="3" />
         </div>
 
         <div class="flex items-center gap-4 border-t border-neutral-200 dark:border-neutral-700 pt-6">
@@ -508,4 +455,3 @@ new class extends Component {
         </div>
     </form>
 </section>
-
