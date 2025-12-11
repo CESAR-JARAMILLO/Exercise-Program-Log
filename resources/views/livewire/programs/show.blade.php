@@ -151,11 +151,7 @@ new class extends Component {
                     {{ __('Assign to Client') }}
                 </flux:button>
             @endif
-            @if ($program->isTemplate() && !$isAssigned)
-                <flux:button href="{{ route('programs.start', $program) }}" variant="primary" wire:navigate>
-                    {{ __('Start Program') }}
-                </flux:button>
-            @elseif ($program->isTemplate() && $isAssigned)
+            @if ($program->isTemplate() && $program->activePrograms->isEmpty())
                 <flux:button href="{{ route('programs.start', $program) }}" variant="primary" wire:navigate>
                     {{ __('Start Program') }}
                 </flux:button>
