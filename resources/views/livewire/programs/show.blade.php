@@ -187,11 +187,17 @@ new class extends Component {
                     {{ __('Restart Program') }}
                 </flux:button>
             @endif
-            @if ($program->canBeEditedBy($user))
+            @php
+                $hasAssignments = $program->assignments->isNotEmpty();
+                $hasInstances = $program->activePrograms->isNotEmpty() || $program->activeProgramsStopped->isNotEmpty();
+            @endphp
+
+            @if ($program->canBeEditedBy($user) && !$hasAssignments && !$hasInstances)
                 <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" wire:navigate>
                     {{ __('Edit') }}
                 </flux:button>
             @endif
+
             @if ($program->canBeDeletedBy($user))
                 <flux:button wire:click="delete"
                     wire:confirm="{{ __('Are you sure you want to delete this program?') }}" variant="ghost"

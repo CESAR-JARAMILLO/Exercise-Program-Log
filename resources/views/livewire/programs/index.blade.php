@@ -62,16 +62,14 @@ new class extends Component {
 
         // Combine and merge (avoid duplicates if a program appears in multiple categories)
         $programs = $ownedPrograms->merge($trainerPrograms)->merge($assignedPrograms)->unique('id');
-        
+
         // For each program, load all active programs count (for client count) if user is trainer/owner
         $programsWithClientCounts = [];
         foreach ($programs as $program) {
             // If user is owner or trainer, count all active programs (all clients)
             if ($program->user_id === $user->id || $program->trainer_id === $user->id) {
                 // Use direct query to get ALL active programs, not just current user's
-                $allActiveCount = ActiveProgram::where('program_id', $program->id)
-                    ->where('status', 'active')
-                    ->count();
+                $allActiveCount = ActiveProgram::where('program_id', $program->id)->where('status', 'active')->count();
                 $programsWithClientCounts[$program->id] = [
                     'assigned_count' => $program->assignments->count(),
                     'active_count' => $allActiveCount,
@@ -104,18 +102,19 @@ new class extends Component {
         ];
     }
 
+    // DELETE LATER : This is local function for the delete button.
     public function delete(Program $program): void
     {
         // Ensure user can delete this program (only owner/trainer can delete)
         abort_unless($program->canBeDeletedBy(Auth::user()), 403);
-        
+
         // Check if program has active instances
         $hasActivePrograms = $program->activePrograms()->where('status', 'active')->exists();
         if ($hasActivePrograms) {
             session()->flash('error', __('Cannot delete program: There are active instances of this program. Please stop all active instances first.'));
             return;
         }
-        
+
         // Check if program has assignments
         $hasAssignments = $program->assignments()->exists();
         if ($hasAssignments) {
@@ -164,7 +163,8 @@ new class extends Component {
         </div>
         <div class="w-full md:w-auto">
             @if ($canCreateProgram)
-                <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate class="w-full md:w-auto">
+                <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate
+                    class="w-full md:w-auto">
                     {{ __('Create Program') }}
                 </flux:button>
             @else
@@ -236,7 +236,8 @@ new class extends Component {
                                 @endif
                                 @php
                                     // Show client assignment badge for trainers/owners
-                                    $isOwnerOrTrainer = ($program->user_id === Auth::id() || $program->trainer_id === Auth::id());
+                                    $isOwnerOrTrainer =
+                                        $program->user_id === Auth::id() || $program->trainer_id === Auth::id();
                                     $clientCounts = $programsWithClientCounts[$program->id] ?? null;
                                     $assignedClientsCount = $clientCounts ? $clientCounts['assigned_count'] : 0;
                                     $activeClientsCount = $clientCounts ? $clientCounts['active_count'] : 0;
@@ -281,7 +282,8 @@ new class extends Component {
                         @endif
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-700">
+                    <div
+                        class="flex flex-wrap items-center gap-2 pt-4 border-t border-neutral-200 dark:border-neutral-700">
                         <flux:button href="{{ route('programs.show', $program) }}" variant="ghost" size="sm"
                             wire:navigate>
                             {{ __('View') }}
@@ -306,7 +308,7 @@ new class extends Component {
                             @if ($todayStatus && !$todayStatus['isLogged'])
                                 {{-- Today has workout and it's not logged yet --}}
                                 <flux:button
-                                    href="{{ route('workouts.log', ['activeProgram' => $firstActiveProgram->id, 'date' => now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('Y-m-d')]) }}"
+                                    href="{{ route('workouts.log', ['activeProgram' => $firstActiveProgram->id,'date' => now()->setTimezone(auth()->user()?->getTimezone() ?? 'UTC')->format('Y-m-d')]) }}"
                                     variant="primary" size="sm" wire:navigate>
                                     {{ __('Log Workout') }}
                                 </flux:button>
@@ -324,20 +326,6 @@ new class extends Component {
                             <flux:button href="{{ route('active-programs.restart', $lastStoppedProgram) }}"
                                 variant="primary" size="sm" wire:navigate>
                                 {{ __('Restart') }}
-                            </flux:button>
-                        @endif
-                        @if ($program->canBeEditedBy(Auth::user()))
-                            <flux:button href="{{ route('programs.edit', $program) }}" variant="ghost" size="sm"
-                                wire:navigate>
-                                {{ __('Edit') }}
-                            </flux:button>
-                        @endif
-                        @if ($program->canBeDeletedBy(Auth::user()))
-                            <flux:button wire:click="delete({{ $program->id }})"
-                                wire:confirm="{{ __('Are you sure you want to delete this program?') }}" variant="ghost"
-                                size="sm"
-                                class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
-                                {{ __('Delete') }}
                             </flux:button>
                         @endif
                     </div>
