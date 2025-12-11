@@ -68,8 +68,13 @@ new class extends Component {
         foreach ($programs as $program) {
             // If user is owner or trainer, count all active programs (all clients)
             if ($program->user_id === $user->id || $program->trainer_id === $user->id) {
-                // Use direct query to get ALL active programs, not just current user's
-                $allActiveCount = ActiveProgram::where('program_id', $program->id)->where('status', 'active')->count();
+                // Exclude owner and trainer from client count
+                $excludeUserIds = [$program->user_id];
+                if ($program->trainer_id) {
+                    $excludeUserIds[] = $program->trainer_id;
+                }
+                // Use direct query to get active programs, excluding owner and trainer
+                $allActiveCount = ActiveProgram::where('program_id', $program->id)->where('status', 'active')->whereNotIn('user_id', $excludeUserIds)->count();
                 $programsWithClientCounts[$program->id] = [
                     'assigned_count' => $program->assignments->count(),
                     'active_count' => $allActiveCount,
