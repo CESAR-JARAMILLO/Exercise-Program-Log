@@ -8,6 +8,15 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+// Legal pages
+Route::get('/terms', function () {
+    return view('legal.terms');
+})->name('legal.terms');
+
+Route::get('/privacy', function () {
+    return view('legal.privacy');
+})->name('legal.privacy');
+
 Volt::route('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');

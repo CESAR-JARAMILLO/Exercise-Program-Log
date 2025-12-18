@@ -85,5 +85,17 @@
             <span>{{ __('Already have an account?') }}</span>
             <flux:link :href="route('login')" wire:navigate>{{ __('Log in') }}</flux:link>
         </div>
+
+        <div class="pt-4 mt-4 border-t border-neutral-200 dark:border-neutral-700">
+            <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <flux:link :href="route('legal.terms')" wire:navigate class="hover:text-zinc-700 dark:hover:text-zinc-300">
+                    {{ __('Terms of Service') }}
+                </flux:link>
+                <span class="text-zinc-400 dark:text-zinc-600">•</span>
+                <flux:link :href="route('legal.privacy')" wire:navigate class="hover:text-zinc-700 dark:hover:text-zinc-300">
+                    {{ __('Privacy Policy') }}
+                </flux:link>
+            </div>
+        </div>
     </div>
 </x-layouts.auth>

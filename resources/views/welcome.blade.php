@@ -466,10 +466,18 @@
         <!-- Footer -->
         <footer class="bg-slate-900 dark:bg-black border-t border-slate-800">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div class="text-center">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                     <p class="text-slate-400">
                         © {{ date('Y') }} {{ config('app.name', 'Program Log') }}. All rights reserved.
                     </p>
+                    <div class="flex gap-6">
+                        <a href="{{ route('legal.terms') }}" class="text-slate-400 hover:text-slate-300 transition-colors">
+                            Terms of Service
+                        </a>
+                        <a href="{{ route('legal.privacy') }}" class="text-slate-400 hover:text-slate-300 transition-colors">
+                            Privacy Policy
+                        </a>
+                    </div>
                 </div>
             </div>
         </footer>
