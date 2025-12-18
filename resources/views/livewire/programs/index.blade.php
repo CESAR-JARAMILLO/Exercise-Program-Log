@@ -6,6 +6,13 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
 new class extends Component {
+    public string $search = '';
+
+    public function updatingSearch(): void
+    {
+        // Reset pagination when search changes
+    }
+
     public function with(): array
     {
         $user = Auth::user();
@@ -62,6 +69,16 @@ new class extends Component {
 
         // Combine and merge (avoid duplicates if a program appears in multiple categories)
         $programs = $ownedPrograms->merge($trainerPrograms)->merge($assignedPrograms)->unique('id');
+
+        // Apply search filter if search term exists
+        if (!empty($this->search)) {
+            $searchTerm = strtolower($this->search);
+            $programs = $programs->filter(function ($program) use ($searchTerm) {
+                $nameMatch = str_contains(strtolower($program->name), $searchTerm);
+                $descriptionMatch = $program->description && str_contains(strtolower($program->description), $searchTerm);
+                return $nameMatch || $descriptionMatch;
+            });
+        }
 
         // For each program, load all active programs count (for client count) if user is trainer/owner
         $programsWithClientCounts = [];
@@ -148,36 +165,59 @@ new class extends Component {
         </div>
     @endif
 
-    <div class="mb-6 flex flex-col md:flex-row items-center md:items-center justify-between gap-4">
-        <div class="flex-1 min-w-0 w-full md:w-auto text-center lg:text-left">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                {{ __('My Programs') }}
-            </h1>
-            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                {{ __('Manage your training programs') }}
-                @if ($maxPrograms !== null)
-                    <span class="ml-2 font-medium">
-                        ({{ $programCount }}/{{ $maxPrograms }})
-                    </span>
+    <div class="mb-6 flex flex-col gap-4">
+        <div class="flex flex-col md:flex-row items-center md:items-center justify-between gap-4">
+            <div class="flex-1 min-w-0 w-full md:w-auto text-center lg:text-left">
+                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                    {{ __('My Programs') }}
+                </h1>
+                <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                    {{ __('Manage your training programs') }}
+                    @if ($maxPrograms !== null)
+                        <span class="ml-2 font-medium">
+                            ({{ $programCount }}/{{ $maxPrograms }})
+                        </span>
+                    @else
+                        <span class="ml-2 font-medium">
+                            ({{ $programCount }})
+                        </span>
+                    @endif
+                </p>
+            </div>
+            <div class="w-full md:w-auto">
+                @if ($canCreateProgram)
+                    <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate
+                        class="w-full md:w-auto">
+                        {{ __('Create Program') }}
+                    </flux:button>
                 @else
-                    <span class="ml-2 font-medium">
-                        ({{ $programCount }})
-                    </span>
+                    <flux:button href="{{ route('programs.create') }}" variant="primary" disabled class="w-full md:w-auto">
+                        {{ __('Create Program') }}
+                    </flux:button>
                 @endif
+            </div>
+        </div>
+
+        <!-- Search Input -->
+        <div class="w-full max-w-md">
+            <flux:input
+                wire:model.live.debounce.300ms="search"
+                type="text"
+                :placeholder="__('Search programs by name or description...')"
+                class="w-full"
+            >
+                <x-slot:icon>
+                    <svg class="h-5 w-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </x-slot:icon>
+            </flux:input>
+        </div>
+        @if (!empty($search))
+            <p class="text-sm text-zinc-600 dark:text-zinc-400">
+                {{ __('Found :count program(s)', ['count' => $programs->count()]) }}
             </p>
-        </div>
-        <div class="w-full md:w-auto">
-            @if ($canCreateProgram)
-                <flux:button href="{{ route('programs.create') }}" variant="primary" wire:navigate
-                    class="w-full md:w-auto">
-                    {{ __('Create Program') }}
-                </flux:button>
-            @else
-                <flux:button href="{{ route('programs.create') }}" variant="primary" disabled class="w-full md:w-auto">
-                    {{ __('Create Program') }}
-                </flux:button>
-            @endif
-        </div>
+        @endif
     </div>
 
     @if (!$canCreateProgram)
@@ -196,13 +236,22 @@ new class extends Component {
 
     @if ($programs->isEmpty())
         <div class="rounded-xl border border-neutral-200 dark:border-neutral-700 p-12 text-center">
-            <p class="text-zinc-600 dark:text-zinc-400">
-                {{ __('No programs yet. Create your first program to get started!') }}
-            </p>
-            @if ($canCreateProgram)
-                <flux:button href="{{ route('programs.create') }}" variant="primary" class="mt-4" wire:navigate>
-                    {{ __('Create Program') }}
+            @if (!empty($search))
+                <p class="text-zinc-600 dark:text-zinc-400 mb-2">
+                    {{ __('No programs found matching ":search".', ['search' => $search]) }}
+                </p>
+                <flux:button wire:click="$set('search', '')" variant="ghost" size="sm">
+                    {{ __('Clear Search') }}
                 </flux:button>
+            @else
+                <p class="text-zinc-600 dark:text-zinc-400">
+                    {{ __('No programs yet. Create your first program to get started!') }}
+                </p>
+                @if ($canCreateProgram)
+                    <flux:button href="{{ route('programs.create') }}" variant="primary" class="mt-4" wire:navigate>
+                        {{ __('Create Program') }}
+                    </flux:button>
+                @endif
             @endif
         </div>
     @else
